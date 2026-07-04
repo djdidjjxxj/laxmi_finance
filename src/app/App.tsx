@@ -328,33 +328,33 @@ function SplashScreen({ navigate }:GP) {
     <div className="flex flex-col h-full min-h-screen" style={{ background: showActions ? CARD : Y }}>
 
       {/* ── Section 1 — full yellow ─────────────────────────── */}
-      <div className={`flex flex-col justify-between px-8 py-10 relative overflow-hidden transition-all duration-300 ${showActions ? "min-h-[72vh]" : "min-h-screen"}`} style={{ background:Y }}>
+      <div className={`flex flex-col justify-between px-7 relative overflow-hidden transition-all duration-300 ${showActions ? "min-h-[56vh] py-7" : "min-h-screen py-9"}`} style={{ background:Y }}>
         {/* decorative circles */}
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.06)" }}/>
         <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.04)" }}/>
 
         {/* Top: logo */}
-        <div className="flex items-center gap-3">
-          <LFLogo size={48}/>
+        <div className="flex items-center gap-2.5">
+          <LFLogo size={34}/>
           <div>
-            <h1 className="text-xl font-bold leading-tight" style={{ color:TEXT }}>Laxmi Finance</h1>
+            <h1 className="hidden" style={{ color:TEXT }}>Laxmi Finance</h1>
             <p className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color:Y2 }}>Microfinance · Est. 2019</p>
           </div>
         </div>
 
         {/* Middle: headline */}
         <div>
-          <h2 className="text-5xl sm:text-6xl font-black leading-tight mb-5" style={{ color:TEXT }}>
-            Fast Loans.<br/>Simple<br/>Repayment.
+          <h2 className="text-[42px] sm:text-5xl font-black leading-[1.1] mb-4" style={{ color:TEXT }}>
+            Fast Loans.<br/>Simple<br/>Repayment.<br/><span className="text-[22px] sm:text-3xl leading-tight">with LAXMI FINANCE.</span>
           </h2>
-          <p className="text-base leading-relaxed mb-10" style={{ color:"rgba(0,0,0,0.55)" }}>
+          <p className="text-[15px] leading-relaxed mb-6" style={{ color:"rgba(0,0,0,0.55)" }}>
             Personal & Business loans up to <strong style={{ color:TEXT }}>₹20,000</strong>.<br/>
             Daily EMI — 33 or 66 day plans.
           </p>
-          <div className="grid grid-cols-3 gap-3 max-w-xs">
+          <div className="grid grid-cols-3 gap-2.5 max-w-[286px]">
             {[["₹20K","Max Loan"],["Daily","EMI"],["48 hrs","Approval"]].map(([v,l])=>(
-              <div key={l} className="rounded-2xl p-3.5 text-center" style={{ background:"rgba(0,0,0,0.1)" }}>
-                <p className="font-black text-xl" style={{ color:TEXT }}>{v}</p>
+              <div key={l} className="rounded-2xl px-2 py-3 text-center min-h-[72px] flex flex-col items-center justify-center" style={{ background:"rgba(0,0,0,0.1)" }}>
+                <p className="font-black text-lg leading-tight" style={{ color:TEXT }}>{v}</p>
                 <p className="text-[10px] mt-0.5 font-semibold" style={{ color:"rgba(0,0,0,0.5)" }}>{l}</p>
               </div>
             ))}
@@ -373,14 +373,14 @@ function SplashScreen({ navigate }:GP) {
 
       {/* ── Section 2 — white, auth buttons ────────────────── */}
       {showActions && (
-      <div className="shrink-0 bg-white px-6 pt-7 pb-10 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
+      <div className="flex-1 bg-white px-6 pt-5 pb-7 space-y-2.5 animate-in slide-in-from-bottom-4 duration-300">
         <button onClick={()=>navigate("login")}
-          className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]"
+          className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]"
           style={{ background:TEXT, color:Y }}>
           CUSTOMER LOGIN
         </button>
         <button onClick={()=>navigate("register")}
-          className="w-full py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-[0.98]"
+          className="w-full py-3.5 rounded-2xl font-bold text-sm border-2 transition-all active:scale-[0.98]"
           style={{ borderColor:TEXT, color:TEXT }}>
           CREATE ACCOUNT
         </button>
