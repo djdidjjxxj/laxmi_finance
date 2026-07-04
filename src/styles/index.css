@@ -35,6 +35,15 @@
   [class*="px-7"] { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
   [class*="px-6"] { padding-left: 1rem !important; padding-right: 1rem !important; }
   [class*="px-5"] { padding-left: 1rem !important; padding-right: 1rem !important; }
+  [class*="pt-7"] { padding-top: 1.15rem !important; }
+  [class*="pt-6"] { padding-top: 1rem !important; }
+  [class*="pt-5"] { padding-top: .95rem !important; }
+  [class*="pt-4"] { padding-top: .85rem !important; }
+  [class*="pb-10"] { padding-bottom: 1.35rem !important; }
+  [class*="pb-8"] { padding-bottom: 1.4rem !important; }
+  [class*="pb-7"] { padding-bottom: 1.2rem !important; }
+  [class*="pb-6"] { padding-bottom: 1rem !important; }
+  [class*="pb-5"] { padding-bottom: .95rem !important; }
   [class*="py-12"] { padding-top: 2rem !important; padding-bottom: 2rem !important; }
   [class*="py-10"] { padding-top: 1.75rem !important; padding-bottom: 1.75rem !important; }
   [class*="py-8"] { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
@@ -46,6 +55,16 @@
   [class*="gap-5"] { gap: 1rem !important; }
   [class*="gap-4"] { gap: .8rem !important; }
   [class*="gap-3"] { gap: .65rem !important; }
+  [class*="mb-10"] { margin-bottom: 1.5rem !important; }
+  [class*="mb-8"] { margin-bottom: 1.25rem !important; }
+  [class*="mb-7"] { margin-bottom: 1.1rem !important; }
+  [class*="mb-6"] { margin-bottom: 1rem !important; }
+  [class*="mb-5"] { margin-bottom: .9rem !important; }
+  [class*="mb-4"] { margin-bottom: .75rem !important; }
+  [class*="mt-8"] { margin-top: 1.4rem !important; }
+  [class*="mt-7"] { margin-top: 1.15rem !important; }
+  [class*="mt-6"] { margin-top: 1rem !important; }
+  [class*="mt-5"] { margin-top: .9rem !important; }
   [class*="space-y-5"] > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
   [class*="space-y-4"] > :not([hidden]) ~ :not([hidden]) { margin-top: .875rem !important; }
 
@@ -81,6 +100,10 @@
   [class*="w-16"], [class*="h-16"] { width: 3.5rem !important; height: 3.5rem !important; }
   [class*="w-14"], [class*="h-14"] { width: 3rem !important; height: 3rem !important; }
   [class*="w-12"], [class*="h-12"] { width: 2.65rem !important; height: 2.65rem !important; }
+
+  [class*="min-h-screen"] {
+    min-height: 100svh !important;
+  }
 
   .grid {
     min-width: 0;

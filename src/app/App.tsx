@@ -312,8 +312,8 @@ function BottomNav({ active, navigate }:{ active:string; navigate:(s:Screen)=>vo
 
 function PH({ title, sub, onBack }:{ title:string; sub?:string; onBack?:()=>void }) {
   return (
-    <div className="px-5 pt-5 pb-10 shrink-0" style={{ background:Y }}>
-      {onBack && <button onClick={onBack} className="flex items-center gap-1 text-sm mb-4" style={{ color:Y2 }}><ChevronLeft size={15}/> Back</button>}
+    <div className="px-5 pt-4 pb-5 shrink-0" style={{ background:Y }}>
+      {onBack && <button onClick={onBack} className="flex items-center gap-1 text-sm mb-3" style={{ color:Y2 }}><ChevronLeft size={15}/> Back</button>}
       <h1 className="text-2xl font-black" style={{ color:TEXT }}>{title}</h1>
       {sub && <p className="text-sm mt-0.5" style={{ color:Y2 }}>{sub}</p>}
     </div>
@@ -326,14 +326,14 @@ function SplashScreen({ navigate }:GP) {
 
   if (showActions) {
     return (
-      <div className="min-h-screen flex flex-col justify-center px-6 py-8 relative overflow-hidden" style={{ background:CARD }}>
+      <div className="min-h-[100svh] flex flex-col justify-center px-6 py-8 relative overflow-hidden" style={{ background:CARD }}>
         <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full pointer-events-none" style={{ background:YBG }}/>
         <div className="absolute -bottom-28 -left-24 w-72 h-72 rounded-full pointer-events-none" style={{ background:YBG }}/>
         <div className="relative w-full max-w-sm mx-auto">
           <div className="flex flex-col items-center text-center mb-8">
             <LFLogo size={48}/>
             <h1 className="mt-4 text-2xl font-black" style={{ color:TEXT }}>Laxmi Finance</h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] mt-1" style={{ color:Y2 }}>Microfinance · Est. 2019</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] mt-1" style={{ color:Y2 }}>SECURE. GROW. PROSPER</p>
           </div>
 
           <div className="space-y-3">
@@ -370,10 +370,10 @@ function SplashScreen({ navigate }:GP) {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen" style={{ background:Y }}>
+    <div className="flex flex-col h-full min-h-[100svh]" style={{ background:Y }}>
 
       {/* ── Section 1 — full yellow ─────────────────────────── */}
-      <div className="flex flex-col justify-between px-7 relative overflow-hidden transition-all duration-300 min-h-screen py-9" style={{ background:Y }}>
+      <div className="flex flex-col gap-7 px-7 relative overflow-hidden transition-all duration-300 min-h-[100svh] py-6" style={{ background:Y }}>
         {/* decorative circles */}
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.06)" }}/>
         <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.04)" }}/>
@@ -383,23 +383,23 @@ function SplashScreen({ navigate }:GP) {
           <LFLogo size={34}/>
           <div>
             <h1 className="hidden" style={{ color:TEXT }}>Laxmi Finance</h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color:Y2 }}>Microfinance · Est. 2019</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color:Y2 }}>SECURE. GROW. PROSPER</p>
           </div>
         </div>
 
         {/* Middle: headline */}
-        <div>
-          <h2 className="text-[42px] sm:text-5xl font-black leading-[1.1] mb-4" style={{ color:TEXT }}>
+        <div className="mt-4">
+          <h2 className="text-[38px] sm:text-5xl font-black leading-[1.08] mb-3" style={{ color:TEXT }}>
             Fast Loans.<br/>Simple<br/>Repayment.<br/><span className="text-[22px] sm:text-3xl leading-tight">with LAXMI FINANCE.</span>
           </h2>
-          <p className="text-[15px] leading-relaxed mb-6" style={{ color:"rgba(0,0,0,0.55)" }}>
+          <p className="text-[14px] leading-relaxed mb-5" style={{ color:"rgba(0,0,0,0.55)" }}>
             Personal & Business loans up to <strong style={{ color:TEXT }}>₹20,000</strong>.<br/>
             Daily EMI — 33 or 66 day plans.
           </p>
           <div className="grid grid-cols-3 gap-2.5 max-w-[286px]">
             {[["₹20K","Max Loan"],["Daily","EMI"],["48 hrs","Approval"]].map(([v,l])=>(
-              <div key={l} className="rounded-2xl px-2 py-3 text-center min-h-[72px] flex flex-col items-center justify-center" style={{ background:"rgba(0,0,0,0.1)" }}>
-                <p className="font-black text-lg leading-tight" style={{ color:TEXT }}>{v}</p>
+              <div key={l} className="rounded-2xl px-2 py-2.5 text-center min-h-[62px] flex flex-col items-center justify-center" style={{ background:"rgba(0,0,0,0.1)" }}>
+                <p className="font-black text-base leading-tight" style={{ color:TEXT }}>{v}</p>
                 <p className="text-[10px] mt-0.5 font-semibold" style={{ color:"rgba(0,0,0,0.5)" }}>{l}</p>
               </div>
             ))}
@@ -407,9 +407,9 @@ function SplashScreen({ navigate }:GP) {
         </div>
 
         {/* Bottom of yellow: "Get Started" label + black pill button */}
-        <div>
+        <div className="mt-1">
           <button onClick={()=>setShowActions(true)}
-            className="flex items-center gap-2 px-6 py-3.5 rounded-full font-bold text-sm transition-all active:scale-[0.97]"
+            className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-[0.97]"
             style={{ background:TEXT, color:Y }}>
             GET STARTED <ArrowRight size={16}/>
           </button>
@@ -527,14 +527,14 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
   return (
     <div className="flex flex-col min-h-screen" style={{ background:BG }}>
       {step<2&&(
-        <div className="px-5 pt-5 pb-10 shrink-0" style={{ background:Y }}>
-          <button onClick={()=>step===0?navigate("splash"):setStep(s=>s-1)} className="flex items-center gap-1 text-sm mb-4" style={{ color:Y2 }}><ChevronLeft size={15}/>{step===0?"Back":"Previous"}</button>
+        <div className="px-5 pt-4 pb-5 shrink-0" style={{ background:Y }}>
+          <button onClick={()=>step===0?navigate("splash"):setStep(s=>s-1)} className="flex items-center gap-1 text-sm mb-3" style={{ color:Y2 }}><ChevronLeft size={15}/>{step===0?"Back":"Previous"}</button>
           <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color:Y2 }}>Step {step+1} of 2</p>
           <h1 className="text-2xl font-black mb-4" style={{ color:TEXT }}>{["Create Account","Your Details"][step]}</h1>
           <div className="flex gap-2">{[0,1].map(i=><div key={i} className="h-1.5 flex-1 rounded-full" style={{ background:i<=step?"rgba(0,0,0,0.4)":"rgba(0,0,0,0.18)" }}/>)}</div>
         </div>
       )}
-      <div className="flex-1 px-5 pt-7 pb-8" style={{ background:CARD }}>
+      <div className="flex-1 px-5 pt-5 pb-8" style={{ background:CARD }}>
         <div className="max-w-md mx-auto">
           {step===0&&(
             <div className="space-y-5">
