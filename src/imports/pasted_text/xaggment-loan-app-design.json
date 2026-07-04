@@ -1,0 +1,489 @@
+Design a PREMIUM enterprise-grade Loan Management Mobile Application for a Finance Company.
+
+Company:
+Xaggment Technologies
+
+Project:
+Loan Management System
+
+The design must look like it was created by a Senior Product Designer with 10+ years of fintech experience.
+
+DO NOT generate generic AI layouts.
+
+I want an actual production-ready modern fintech product.
+
+=================================
+
+STYLE
+
+Minimal
+
+Premium
+
+Modern
+
+Professional
+
+Corporate
+
+Enterprise
+
+Clean
+
+Trustworthy
+
+High-end SaaS
+
+Banking Grade
+
+Highly usable
+
+Psychology based UI
+
+NOT colorful.
+
+NOT playful.
+
+NOT ecommerce.
+
+NOT startup landing page.
+
+Must feel like a secure finance application.
+
+=================================
+
+COLOR PALETTE
+
+Primary:
+Deep Navy Blue
+
+Secondary:
+White
+
+Accent:
+Premium Gold / Warm Yellow
+
+Success:
+Green
+
+Warning:
+Orange
+
+Error:
+Red
+
+Lots of whitespace.
+
+Rounded corners 14px.
+
+Soft shadows.
+
+Premium typography.
+
+Material Design inspired.
+
+Very smooth user experience.
+
+=================================
+
+USER TYPES
+
+Customer
+
+Agent
+
+Admin
+
+=================================
+
+FIRST SCREEN
+
+Beautiful Splash Screen
+
+Company Logo
+
+Secure Loan Management
+
+Apply in Minutes
+
+Modern illustration
+
+Buttons:
+
+LOGIN
+
+REGISTER
+
+APPLY FOR LOAN
+
+Admin Login must NOT appear as a large primary button.
+
+Instead place a small "Admin Access" text button at the bottom so normal customers don't get confused.
+
+=================================
+
+REGISTRATION FLOW
+
+Register with Mobile Number
+
+OTP Verification
+
+Name
+
+Password
+
+Registration Successful
+
+Automatically create
+
+TEMPORARY CUSTOMER TOKEN
+
+Example
+
+TMP-2026-000123
+
+Customer can login immediately.
+
+=================================
+
+LOGIN FLOW
+
+Customer Login
+
+Phone Number
+
+Password
+
+Forgot Password
+
+OTP Login
+
+=================================
+
+CUSTOMER HOME
+
+Large Welcome Card
+
+Temporary Token
+
+Application Status
+
+Apply for Loan
+
+Eligibility Criteria
+
+Loan Calculator
+
+Loan Status
+
+Notifications
+
+Help & Support
+
+Profile
+
+=================================
+
+ELIGIBILITY SCREEN
+
+Check Eligibility
+
+Age
+
+Income
+
+Occupation
+
+Documents Required
+
+Loan Amount
+
+Monthly Income
+
+Continue Button
+
+=================================
+
+LOAN APPLICATION
+
+Use the attached physical loan application form as reference.
+
+Digitize the paper form into multiple modern mobile steps.
+
+Do NOT copy the paper design.
+
+Create a premium digital experience.
+
+Sections
+
+Personal Details
+
+Applicant Details
+
+Co-Applicant
+
+Address
+
+KYC Documents
+
+Photo Capture
+
+Signature
+
+Loan Details
+
+Declaration
+
+Review
+
+Submit
+
+Progress bar on top.
+
+=================================
+
+PHOTO CAPTURE
+
+Live Camera
+
+Take Photo
+
+Retake
+
+Capture Success
+
+=================================
+
+KYC
+
+Aadhaar
+
+PAN
+
+Voter ID
+
+Document Upload
+
+Verification Status
+
+=================================
+
+CUSTOMER DASHBOARD
+
+Temporary Token
+
+Loan Status
+
+Pending
+
+Approved
+
+Rejected
+
+Loan Amount
+
+EMI
+
+Application History
+
+Download PDF
+
+=================================
+
+AFTER APPROVAL
+
+Temporary Token automatically converts into Permanent Loan ID.
+
+Example
+
+LF-2026-0000123
+
+Customer Dashboard updates automatically.
+
+=================================
+
+IF REJECTED
+
+Application disappears.
+
+History shows
+
+Application Rejected.
+
+=================================
+
+ADMIN LOGIN
+
+Separate Login
+
+Professional
+
+Dark Theme Optional
+
+=================================
+
+ADMIN DASHBOARD
+
+Statistics
+
+Pending Loans
+
+Approved
+
+Rejected
+
+Customers
+
+Agents
+
+Collections
+
+Revenue
+
+Recent Applications
+
+Charts
+
+Analytics
+
+=================================
+
+ADMIN FUNCTIONS
+
+View Customer
+
+Approve
+
+Reject
+
+Assign Agent
+
+Generate PDF
+
+Generate Agreement
+
+Export Reports
+
+=================================
+
+AGENT DASHBOARD
+
+Assigned Customers
+
+Pending Visits
+
+New Application
+
+Cash Collection
+
+Upload Receipt
+
+=================================
+
+EMI SCREEN
+
+Upcoming EMI
+
+Paid EMI
+
+Due EMI
+
+Late Payment
+
+Payment History
+
+=================================
+
+PROFILE
+
+Edit Profile
+
+Documents
+
+Security
+
+Logout
+
+=================================
+
+NOTIFICATIONS
+
+Application Submitted
+
+Approved
+
+Rejected
+
+EMI Reminder
+
+=================================
+
+COMPONENTS
+
+Premium Buttons
+
+Modern Cards
+
+Professional Tables
+
+Finance Charts
+
+Search
+
+Filters
+
+Modern Forms
+
+Floating Labels
+
+Bottom Navigation
+
+Side Navigation
+
+Progress Indicators
+
+Timeline
+
+Badges
+
+Status Chips
+
+=================================
+
+UX
+
+One-handed mobile usage.
+
+Thumb friendly.
+
+Simple navigation.
+
+Minimum clicks.
+
+Premium animations.
+
+=================================
+
+DESIGN QUALITY
+
+Looks like:
+
+CRED
+
+Razorpay
+
+Jupiter
+
+Groww
+
+Modern Banking Apps
+
+NOT generic.
+
+NOT template.
+
+NOT AI generated.
+
+Every screen should be connected with realistic user flow.
+
+Generate all screens as one complete scalable design system suitable for future Laravel development.
