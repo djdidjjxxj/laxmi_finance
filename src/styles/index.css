@@ -16,7 +16,7 @@
    whole product usable on narrow screens without rewriting each screen. */
 @media (max-width: 480px) {
   :root {
-    --font-size: 14px;
+    --font-size: 15px;
   }
 
   html,
@@ -28,7 +28,7 @@
   }
 
   body {
-    font-size: 14px;
+    font-size: 15px;
   }
 
   [class*="px-8"] { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
@@ -53,9 +53,9 @@
   [class*="rounded-2xl"] { border-radius: 1rem !important; }
 
   [class*="text-6xl"] { font-size: 2.8rem !important; line-height: 1.05 !important; }
-  [class*="text-5xl"] { font-size: 2.35rem !important; line-height: 1.08 !important; }
-  [class*="text-4xl"] { font-size: 2rem !important; line-height: 1.12 !important; }
-  [class*="text-3xl"] { font-size: 1.55rem !important; line-height: 1.18 !important; }
+  [class*="text-5xl"] { font-size: 2.45rem !important; line-height: 1.08 !important; }
+  [class*="text-4xl"] { font-size: 2.05rem !important; line-height: 1.12 !important; }
+  [class*="text-3xl"] { font-size: 1.65rem !important; line-height: 1.18 !important; }
   [class*="text-2xl"] { font-size: 1.35rem !important; line-height: 1.2 !important; }
   [class*="text-xl"] { font-size: 1.1rem !important; line-height: 1.25 !important; }
   [class*="text-lg"] { font-size: 1rem !important; line-height: 1.35 !important; }
@@ -72,8 +72,8 @@
   input[class*="py-3.5"],
   select[class*="py-3"],
   textarea[class*="py-3"] {
-    padding-top: .72rem !important;
-    padding-bottom: .72rem !important;
+    padding-top: .82rem !important;
+    padding-bottom: .82rem !important;
   }
 
   [class*="w-24"], [class*="h-24"] { width: 4.75rem !important; height: 4.75rem !important; }
@@ -86,3 +86,4 @@
     min-width: 0;
   }
 }
+

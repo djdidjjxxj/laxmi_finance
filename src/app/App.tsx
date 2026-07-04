@@ -324,11 +324,56 @@ function PH({ title, sub, onBack }:{ title:string; sub?:string; onBack?:()=>void
 function SplashScreen({ navigate }:GP) {
   const [showActions, setShowActions] = useState(false);
 
+  if (showActions) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center px-6 py-8 relative overflow-hidden" style={{ background:CARD }}>
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full pointer-events-none" style={{ background:YBG }}/>
+        <div className="absolute -bottom-28 -left-24 w-72 h-72 rounded-full pointer-events-none" style={{ background:YBG }}/>
+        <div className="relative w-full max-w-sm mx-auto">
+          <div className="flex flex-col items-center text-center mb-8">
+            <LFLogo size={48}/>
+            <h1 className="mt-4 text-2xl font-black" style={{ color:TEXT }}>Laxmi Finance</h1>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] mt-1" style={{ color:Y2 }}>Microfinance · Est. 2019</p>
+          </div>
+
+          <div className="space-y-3">
+            <button onClick={()=>navigate("login")}
+              className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]"
+              style={{ background:TEXT, color:Y }}>
+              CUSTOMER LOGIN
+            </button>
+            <button onClick={()=>navigate("register")}
+              className="w-full py-4 rounded-2xl font-bold text-sm border-2 transition-all active:scale-[0.98]"
+              style={{ borderColor:TEXT, color:TEXT, background:CARD }}>
+              CREATE ACCOUNT
+            </button>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button onClick={()=>navigate("agent-login")}
+                className="py-3.5 rounded-2xl text-xs font-bold border text-center"
+                style={{ borderColor:BORD, color:MUTED, background:CARD }}>
+                Agent Login
+              </button>
+              <button onClick={()=>navigate("admin-login")}
+                className="py-3.5 rounded-2xl text-xs font-bold border text-center"
+                style={{ borderColor:BORD, color:MUTED, background:CARD }}>
+                Admin Access
+              </button>
+            </div>
+          </div>
+
+          <button onClick={()=>setShowActions(false)} className="w-full mt-7 py-2 text-xs font-bold" style={{ color:MUTED }}>
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full min-h-screen" style={{ background: showActions ? CARD : Y }}>
+    <div className="flex flex-col h-full min-h-screen" style={{ background:Y }}>
 
       {/* ── Section 1 — full yellow ─────────────────────────── */}
-      <div className={`flex flex-col justify-between px-7 relative overflow-hidden transition-all duration-300 ${showActions ? "min-h-[56vh] py-7" : "min-h-screen py-9"}`} style={{ background:Y }}>
+      <div className="flex flex-col justify-between px-7 relative overflow-hidden transition-all duration-300 min-h-screen py-9" style={{ background:Y }}>
         {/* decorative circles */}
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.06)" }}/>
         <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.04)" }}/>
@@ -370,35 +415,6 @@ function SplashScreen({ navigate }:GP) {
           </button>
         </div>
       </div>
-
-      {/* ── Section 2 — white, auth buttons ────────────────── */}
-      {showActions && (
-      <div className="flex-1 bg-white px-6 pt-5 pb-7 space-y-2.5 animate-in slide-in-from-bottom-4 duration-300">
-        <button onClick={()=>navigate("login")}
-          className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]"
-          style={{ background:TEXT, color:Y }}>
-          CUSTOMER LOGIN
-        </button>
-        <button onClick={()=>navigate("register")}
-          className="w-full py-3.5 rounded-2xl font-bold text-sm border-2 transition-all active:scale-[0.98]"
-          style={{ borderColor:TEXT, color:TEXT }}>
-          CREATE ACCOUNT
-        </button>
-        <div className="flex gap-3 pt-1">
-          <button onClick={()=>navigate("agent-login")}
-            className="flex-1 py-3 rounded-2xl text-xs font-bold border text-center"
-            style={{ borderColor:BORD, color:MUTED }}>
-            Agent Login
-          </button>
-          <button onClick={()=>navigate("admin-login")}
-            className="flex-1 py-3 rounded-2xl text-xs font-bold border text-center"
-            style={{ borderColor:BORD, color:MUTED }}>
-            Admin Access
-          </button>
-        </div>
-      </div>
-      )}
-
     </div>
   );
 }
