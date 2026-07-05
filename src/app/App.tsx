@@ -373,7 +373,7 @@ function SplashScreen({ navigate }:GP) {
     <div className="flex flex-col h-full min-h-[100svh]" style={{ background:Y }}>
 
       {/* ── Section 1 — full yellow ─────────────────────────── */}
-      <div className="flex flex-col gap-7 px-7 relative overflow-hidden transition-all duration-300 min-h-[100svh] py-6" style={{ background:Y }}>
+      <div className="flex flex-col gap-0 px-7 relative overflow-hidden transition-all duration-300 min-h-[100svh] pt-6 pb-5" style={{ background:Y }}>
         {/* decorative circles */}
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.06)" }}/>
         <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.04)" }}/>
@@ -388,7 +388,7 @@ function SplashScreen({ navigate }:GP) {
         </div>
 
         {/* Middle: headline */}
-        <div className="mt-4">
+        <div className="mt-[clamp(28px,5svh,54px)]">
           <h2 className="text-[38px] sm:text-5xl font-black leading-[1.08] mb-3" style={{ color:TEXT }}>
             Fast Loans.<br/>Simple<br/>Repayment.<br/><span className="text-[22px] sm:text-3xl leading-tight">with LAXMI FINANCE.</span>
           </h2>
@@ -407,7 +407,7 @@ function SplashScreen({ navigate }:GP) {
         </div>
 
         {/* Bottom of yellow: "Get Started" label + black pill button */}
-        <div className="mt-1">
+        <div className="mt-[clamp(30px,7svh,78px)]">
           <button onClick={()=>setShowActions(true)}
             className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-[0.97]"
             style={{ background:TEXT, color:Y }}>
