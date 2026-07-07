@@ -1105,7 +1105,12 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
       const docs: Record<string, string> = {};
       for (const [key, file] of Object.entries(files)) {
         if (file) {
-          try { docs[key] = await apiUpload(file.url, file.name || `${key}.jpg`); } catch { docs[key] = 'local'; }
+          try {
+            const base64 = await fileToBase64(file.url);
+            docs[key] = await compressImage(base64);
+          } catch {
+            docs[key] = 'local';
+          }
         }
       }
       const { loan } = await api('/loans', {
@@ -1117,7 +1122,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
           co_borrower: { name: form.coName, phone: form.coPhone, relation: form.coRelation, address: form.coAddress },
           documents: docs,
           customer_phone: session.role==="agent" ? form.phone : undefined,
-          customer_name: session.role==="agent" ? form.name : undefined,
+          customer_name: form.name,
           aadhaar: form.aadhaar,
           pan: form.pan,
         }),
