@@ -13,3 +13,6 @@ dist/
 /storage/framework/testing/*
 /storage/framework/views/*
 /bootstrap/cache/*
+
+.vercel
+.env*

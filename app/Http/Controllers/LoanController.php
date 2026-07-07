@@ -600,4 +600,12 @@ class LoanController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function health(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'ok',
+            'timestamp' => now()->toIso8601String()
+        ]);
+    }
 }

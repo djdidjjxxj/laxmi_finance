@@ -17,8 +17,153 @@ function ensureCsrf() {
   return csrfReady;
 }
 
-async function api(path: string, opts: RequestInit = {}) {
-  if (opts.method && opts.method !== 'GET') await ensureCsrf();
+let isWaking = false;
+let wakePromise: Promise<void> | null = null;
+const requestQueue: { run: () => Promise<any>; resolve: (value: any) => void; reject: (reason: any) => void }[] = [];
+
+let globalSetWakingState: ((waking: boolean, message: string) => void) | null = null;
+
+function setWakingState(waking: boolean, message: string = "") {
+  isWaking = waking;
+  if (globalSetWakingState) {
+    globalSetWakingState(waking, message);
+  }
+}
+
+async function silentWakeUp(): Promise<void> {
+  if (wakePromise) return wakePromise;
+
+  wakePromise = (async () => {
+    setWakingState(true, "Connecting to server...");
+    let attempts = 0;
+    while (true) {
+      try {
+        const res = await fetch('/api/health', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data.status === 'ok') {
+            break;
+          }
+        }
+      } catch (e) {
+        // Silent error
+      }
+      
+      attempts++;
+      if (attempts >= 1) {
+        setWakingState(true, "Preparing secure connection...");
+      }
+      await new Promise(r => setTimeout(r, 5000));
+    }
+    setWakingState(false);
+    wakePromise = null;
+  })();
+
+  return wakePromise;
+}
+
+const activeRequests = new Map<string, Promise<any>>();
+
+async function api(path: string, opts: RequestInit = {}): Promise<any> {
+  if (path === '/health') {
+    return executeFetch(path, opts);
+  }
+
+  const requestKey = opts.method === 'GET' || !opts.method 
+    ? `${path}:${JSON.stringify(opts.headers || {})}`
+    : null;
+
+  if (requestKey && activeRequests.has(requestKey)) {
+    return activeRequests.get(requestKey);
+  }
+
+  const promise = (async () => {
+    if (wakePromise || isWaking) {
+      return new Promise((resolve, reject) => {
+        requestQueue.push({
+          run: () => apiWithRetry(path, opts),
+          resolve,
+          reject
+        });
+      });
+    }
+
+    try {
+      return await apiWithRetry(path, opts);
+    } catch (err: any) {
+      const errMsg = err.message || "";
+      const isNetworkError = errMsg.includes("Failed to fetch") || 
+                            errMsg.includes("NetworkError") || 
+                            errMsg.includes("419") || 
+                            errMsg.includes("502") || 
+                            errMsg.includes("503") || 
+                            errMsg.includes("504");
+      if (isNetworkError) {
+        const retryPromise = new Promise((resolve, reject) => {
+          requestQueue.push({
+            run: () => apiWithRetry(path, opts),
+            resolve,
+            reject
+          });
+        });
+
+        await silentWakeUp();
+        await processQueue();
+        return retryPromise;
+      }
+      throw err;
+    }
+  })();
+
+  if (requestKey) {
+    activeRequests.set(requestKey, promise);
+    promise.finally(() => activeRequests.delete(requestKey));
+  }
+
+  return promise;
+}
+
+async function processQueue() {
+  while (requestQueue.length > 0) {
+    const req = requestQueue.shift();
+    if (req) {
+      try {
+        const res = await req.run();
+        req.resolve(res);
+      } catch (err) {
+        req.reject(err);
+      }
+    }
+  }
+}
+
+async function apiWithRetry(path: string, opts: RequestInit = {}, attempt = 0): Promise<any> {
+  const retryDelays = [5000, 10000, 20000, 20000, 20000];
+  const maxRetries = 5;
+
+  try {
+    return await executeFetch(path, opts);
+  } catch (err: any) {
+    const errMsg = err.message || "";
+    const isNetworkError = errMsg.includes("Failed to fetch") || 
+                          errMsg.includes("NetworkError") || 
+                          errMsg.includes("502") || 
+                          errMsg.includes("503") || 
+                          errMsg.includes("504");
+    if (isNetworkError && attempt < maxRetries) {
+      const delay = retryDelays[attempt] || 20000;
+      setWakingState(true, `Retrying connection (${attempt + 1}/${maxRetries})...`);
+      await new Promise(r => setTimeout(r, delay));
+      return apiWithRetry(path, opts, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+async function executeFetch(path: string, opts: RequestInit = {}) {
+  if (path !== '/health' && opts.method && opts.method !== 'GET') {
+    await ensureCsrf();
+  }
   const xsrf = document.cookie
     .split('; ')
     .find(c => c.startsWith('XSRF-TOKEN='))
@@ -2354,8 +2499,28 @@ export default function App() {
   const [session, setSession] = useState<Session>({ role:null, userId:"", name:"" });
   const [db,      setDB]      = useState<DB>(INIT_DB);
   const [drawer,  setDrawer]  = useState(false);
+  const [wakingStatus, setWakingStatus] = useState<{ waking: boolean; message: string }>({ waking: false, message: "" });
 
   useEffect(() => {
+    globalSetWakingState = (waking, message) => {
+      setWakingStatus({ waking, message });
+    };
+    silentWakeUp();
+
+    const handleWakeup = () => {
+      if (document.visibilityState === 'visible') {
+        silentWakeUp();
+      }
+    };
+    window.addEventListener('visibilitychange', handleWakeup);
+    window.addEventListener('focus', handleWakeup);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        api('/health').catch(() => {});
+      }
+    }, 4 * 60 * 1000);
+
     ensureCsrf();
     api('/auth/session').then(async ({ user }) => {
       if (user && user.role) {
@@ -2366,6 +2531,12 @@ export default function App() {
         else setScreen('customer-home');
       }
     }).catch(() => {});
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleWakeup);
+      window.removeEventListener('focus', handleWakeup);
+      clearInterval(interval);
+    };
   }, []);
 
   const navigate=(s:Screen)=>{ if(s==='splash'&&session.role){api('/auth/logout',{method:'POST'}).catch(()=>{});setSession({role:null,userId:'',name:''});setDB(INIT_DB);} setScreen(s); setDrawer(false); };
@@ -2400,6 +2571,14 @@ export default function App() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ fontFamily:"'DM Sans','Inter',system-ui,sans-serif", background:BG }}>
       {!isAuth && <Sidebar screen={screen} navigate={navigate} session={session}/>}
+
+      {/* Connection Waking Overlay */}
+      {wakingStatus.waking && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex flex-col items-center justify-center p-6 text-white text-center backdrop-blur-sm">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent mb-4" style={{ borderColor: Y, borderTopColor: 'transparent' }}></div>
+          <p className="text-sm font-bold tracking-wide animate-pulse" style={{ color: Y }}>{wakingStatus.message}</p>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {!isAuth && <TopBar session={session} onMenu={()=>setDrawer(o=>!o)}/>}

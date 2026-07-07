@@ -9,6 +9,8 @@ Route::post('/auth/register', [RegisteredUserController::class, 'store']);
 Route::post('/auth/login', [AuthenticatedSessionController::class, 'store']);
 Route::get('/auth/session', [AuthenticatedSessionController::class, 'show']);
 
+Route::get('/health', [LoanController::class, 'health']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthenticatedSessionController::class, 'destroy']);
     Route::delete('/auth/account', [LoanController::class, 'deleteAccount']);
