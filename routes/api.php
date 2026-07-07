@@ -1,0 +1,34 @@
+<?php
+
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\LoanController;
+use Illuminate\Support\Facades\Route;
+
+Route::post('/auth/register', [RegisteredUserController::class, 'store']);
+Route::post('/auth/login', [AuthenticatedSessionController::class, 'store']);
+Route::get('/auth/session', [AuthenticatedSessionController::class, 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthenticatedSessionController::class, 'destroy']);
+    Route::delete('/auth/account', [LoanController::class, 'deleteAccount']);
+
+    Route::get('/data', [LoanController::class, 'data']);
+
+    Route::post('/loans', [LoanController::class, 'store']);
+    Route::put('/loans/{id}/status', [LoanController::class, 'updateStatus']);
+    Route::put('/loans/{id}/assign', [LoanController::class, 'assignAgent']);
+    Route::delete('/loans/{id}', [LoanController::class, 'deleteLoan']);
+    Route::get('/loans/{id}/pdf', [LoanController::class, 'pdf']);
+
+    Route::get('/emi-dues', [LoanController::class, 'emiDues']);
+
+    Route::get('/admin/db/tables', [LoanController::class, 'getDbTables']);
+    Route::get('/admin/db/tables/{table}', [LoanController::class, 'getDbTableData']);
+    Route::put('/admin/db/tables/{table}/row', [LoanController::class, 'updateDbRow']);
+    Route::delete('/admin/db/tables/{table}/row/{id}', [LoanController::class, 'deleteDbRow']);
+
+    Route::post('/agent/log', [LoanController::class, 'logActivity']);
+
+    Route::post('/uploads', [LoanController::class, 'upload']);
+});

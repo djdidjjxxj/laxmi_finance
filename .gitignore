@@ -1,5 +1,15 @@
 .vercel
-node_modules
-dist
+node_modules/
+vendor/
+dist/
+.env
 .DS_Store
 *.log
+/public/hot
+/public/storage
+/storage/*.key
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/bootstrap/cache/*
