@@ -11,6 +11,10 @@
       "destination": "https://laxmi-finance.onrender.com/sanctum/:path*"
     },
     {
+      "source": "/storage/:path*",
+      "destination": "https://laxmi-finance.onrender.com/storage/:path*"
+    },
+    {
       "source": "/((?!assets/|favicon.ico|manifest.json).*)",
       "destination": "/index.html"
     }

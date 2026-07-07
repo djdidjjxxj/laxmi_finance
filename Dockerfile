@@ -34,4 +34,4 @@ RUN npm run build
 # Expose port and start server
 EXPOSE 80
 
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
+CMD (php artisan storage:link || true) && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
