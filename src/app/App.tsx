@@ -17,6 +17,53 @@ function ensureCsrf() {
   return csrfReady;
 }
 
+let globalTriggerLogout: (() => void) | null = null;
+
+async function fileToBase64(blobUrl: string): Promise<string> {
+  if (blobUrl.startsWith('data:')) return blobUrl;
+  const resp = await fetch(blobUrl);
+  const blob = await resp.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function compressImage(dataUrl: string, maxWidth = 800, maxHeight = 800, quality = 0.75): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 let isWaking = false;
 let wakePromise: Promise<void> | null = null;
 const requestQueue: { run: () => Promise<any>; resolve: (value: any) => void; reject: (reason: any) => void }[] = [];
@@ -181,6 +228,9 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 419) { csrfReady = null; }
+    if (res.status === 401 || res.status === 419) {
+      if (globalTriggerLogout) globalTriggerLogout();
+    }
     throw new Error(data.message || `Request failed: ${res.status}`);
   }
   return data;
@@ -1892,14 +1942,19 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
               <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>Uploaded Documents</p>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(docs).map(([key,url])=>(
-                  <a key={key} href={url as string} target="_blank" rel="noopener noreferrer" className="block rounded-2xl overflow-hidden border-2 hover:shadow-lg transition-shadow" style={{ borderColor:BORD }}>
+                  <div key={key} onClick={() => {
+                    const newWin = window.open();
+                    if (newWin) {
+                      newWin.document.write(`<html><head><title>${docLabels[key] || key}</title></head><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#111;min-height:100vh;"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain;margin:auto;"/></body></html>`);
+                    }
+                  }} className="block rounded-2xl overflow-hidden border-2 hover:shadow-lg transition-shadow cursor-pointer animate-fadeIn" style={{ borderColor:BORD }}>
                     <div className="h-28 bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img src={url as string} alt={docLabels[key]||key} className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none';(e.target as HTMLImageElement).parentElement!.innerHTML=`<div class="flex flex-col items-center gap-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${MUTED}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg><span style="font-size:10px;color:${MUTED}">View File</span></div>`;}}/>
                     </div>
                     <div className="px-3 py-2" style={{ background:YBG }}>
                       <p className="text-[10px] font-bold truncate" style={{ color:TEXT }}>{docLabels[key]||key}</p>
                     </div>
-                  </a>
+                  </div>
                 ))}
               </div>
             </div>
@@ -2505,10 +2560,41 @@ export default function App() {
   const [drawer,  setDrawer]  = useState(false);
   const [wakingStatus, setWakingStatus] = useState<{ waking: boolean; message: string }>({ waking: false, message: "" });
 
+  // Automatically save session changes to localStorage
+  useEffect(() => {
+    if (session.role) {
+      localStorage.setItem('lf_session', JSON.stringify(session));
+    } else {
+      localStorage.removeItem('lf_session');
+    }
+  }, [session]);
+
   useEffect(() => {
     globalSetWakingState = (waking, message) => {
       setWakingStatus({ waking, message });
     };
+
+    globalTriggerLogout = () => {
+      setSession({ role: null, userId: "", name: "" });
+      setScreen("splash");
+      setDB(INIT_DB);
+      localStorage.removeItem('lf_session');
+    };
+
+    // Restore session instantly from localStorage before fetching server status
+    const saved = localStorage.getItem('lf_session');
+    if (saved) {
+      try {
+        const sess = JSON.parse(saved);
+        setSession(sess);
+        if (sess.role === 'admin') setScreen('admin-dashboard');
+        else if (sess.role === 'agent') setScreen('agent-dashboard');
+        else setScreen('customer-home');
+        // Pre-fetch fresh database content in background
+        api('/data').then(data => setDB(d => ({...d,...data}))).catch(() => {});
+      } catch {}
+    }
+
     silentWakeUp();
 
     const handleWakeup = () => {
@@ -2528,11 +2614,19 @@ export default function App() {
     ensureCsrf();
     api('/auth/session').then(async ({ user }) => {
       if (user && user.role) {
-        setSession({ role: user.role, userId: String(user.id), name: user.name });
+        const freshSess = { role: user.role, userId: String(user.id), name: user.name };
+        setSession(freshSess);
+        localStorage.setItem('lf_session', JSON.stringify(freshSess));
         try { const data = await api('/data'); setDB(d => ({...d,...data})); } catch {}
         if (user.role === 'admin') setScreen('admin-dashboard');
         else if (user.role === 'agent') setScreen('agent-dashboard');
         else setScreen('customer-home');
+      } else {
+        // If server says no session, log out locally
+        setSession({ role: null, userId: "", name: "" });
+        setScreen("splash");
+        setDB(INIT_DB);
+        localStorage.removeItem('lf_session');
       }
     }).catch(() => {});
 
@@ -2543,7 +2637,7 @@ export default function App() {
     };
   }, []);
 
-  const navigate=(s:Screen)=>{ if(s==='splash'&&session.role){api('/auth/logout',{method:'POST'}).catch(()=>{});setSession({role:null,userId:'',name:''});setDB(INIT_DB);} setScreen(s); setDrawer(false); };
+  const navigate=(s:Screen)=>{ if(s==='splash'&&session.role){api('/auth/logout',{method:'POST'}).catch(()=>{});setSession({role:null,userId:'',name:''});setDB(INIT_DB); localStorage.removeItem('lf_session');} setScreen(s); setDrawer(false); };
   const isAuth=AUTH_SCREENS.includes(screen);
   const isAdmin=screen==="admin-dashboard";
   const isAgent=screen==="agent-dashboard";
