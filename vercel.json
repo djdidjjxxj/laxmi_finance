@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://laxmi-finance-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/sanctum/:path*",
+      "destination": "https://laxmi-finance-api.onrender.com/sanctum/:path*"
+    },
+    {
+      "source": "/((?!assets/|favicon.ico|manifest.json).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
