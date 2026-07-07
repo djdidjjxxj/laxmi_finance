@@ -23,6 +23,7 @@ class LoanApplication extends Model
         'co_borrower',
         'documents',
         'aadhaar',
+        'pan',
     ];
 
     protected function casts(): array

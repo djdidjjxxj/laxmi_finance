@@ -14,6 +14,7 @@ class CustomerProfile extends Model
         'monthly_income',
         'metadata',
         'aadhaar',
+        'pan',
     ];
 
     protected function casts(): array

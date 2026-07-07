@@ -62,6 +62,8 @@ class LoanController extends Controller
             'documents' => ['nullable', 'array'],
             'customer_phone' => ['nullable', 'string', 'size:10'],
             'customer_name' => ['nullable', 'string', 'max:255'],
+            'aadhaar' => ['nullable', 'string', 'size:12'],
+            'pan' => ['nullable', 'string', 'size:10'],
         ]);
 
         $user = $request->user();
@@ -106,6 +108,8 @@ class LoanController extends Controller
             'co_borrower' => $request->co_borrower,
             'documents' => $request->documents ?? [],
             'assigned_agent_id' => $agentId,
+            'aadhaar' => $request->aadhaar,
+            'pan' => $request->pan,
         ]);
 
         $customerUser = User::find($customerId);
@@ -118,6 +122,8 @@ class LoanController extends Controller
                 'city' => $request->city,
                 'address' => $request->address,
                 'monthly_income' => $request->monthly_income,
+                'aadhaar' => $request->aadhaar,
+                'pan' => $request->pan,
             ]
         );
 
@@ -340,6 +346,8 @@ class LoanController extends Controller
             'coBorrowerAddress' => $a->co_borrower['address'] ?? '',
             'documents' => $a->documents ?? [],
             'customerPhoto' => $a->customer?->customerProfile?->photo ?? '',
+            'aadhaar' => $a->aadhaar ?? '',
+            'pan' => $a->pan ?? '',
         ];
     }
 

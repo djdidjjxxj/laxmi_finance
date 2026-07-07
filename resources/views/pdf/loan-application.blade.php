@@ -45,13 +45,36 @@ h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   <div class="row"><span class="lbl">Assigned Agent</span><span class="val">{{ $loan->assignedAgent?->name ?? 'Unassigned' }}</span></div>
 </div>
 
+@php
+  $docs = $loan->documents ?? [];
+  $photoUrl = $docs['photo'] ?? '';
+  if (str_starts_with($photoUrl, '/storage/')) {
+      $photoUrl = url($photoUrl);
+  }
+  $aadhaarUrl = $docs['aadhaar'] ?? '';
+  if (str_starts_with($aadhaarUrl, '/storage/')) {
+      $aadhaarUrl = url($aadhaarUrl);
+  }
+  $panUrl = $docs['pan'] ?? '';
+  if (str_starts_with($panUrl, '/storage/')) {
+      $panUrl = url($panUrl);
+  }
+@endphp
+
 <h3>Applicant Details</h3>
-<div class="grid">
-  <div class="row"><span class="lbl">Full Name</span><span class="val">{{ $loan->customer?->name }}</span></div>
-  <div class="row"><span class="lbl">Mobile</span><span class="val">+91 {{ $loan->customer?->phone }}</span></div>
-  <div class="row"><span class="lbl">City</span><span class="val">{{ $loan->city }}</span></div>
-  <div class="row"><span class="lbl">Monthly Income</span><span class="val">&#8377;{{ number_format($loan->monthly_income ?? 0) }}</span></div>
-  <div class="row full"><span class="lbl">Address</span><span class="val">{{ $loan->address }}</span></div>
+<div style="margin-bottom:12px; overflow:hidden;">
+  @if($photoUrl)
+    <img src="{{ $photoUrl }}" style="width:100px; height:120px; border:1px solid #E5E7EB; border-radius:8px; object-fit:cover; float:right; margin-left:16px;" alt="Applicant Photo" />
+  @endif
+  <div class="grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+    <div class="row"><span class="lbl">Full Name</span><span class="val">{{ $loan->customer?->name }}</span></div>
+    <div class="row"><span class="lbl">Mobile</span><span class="val">+91 {{ $loan->customer?->phone }}</span></div>
+    <div class="row"><span class="lbl">Aadhaar Number</span><span class="val">{{ $loan->aadhaar ?? '—' }}</span></div>
+    <div class="row"><span class="lbl">PAN Number</span><span class="val">{{ $loan->pan ?? '—' }}</span></div>
+    <div class="row"><span class="lbl">City</span><span class="val">{{ $loan->city }}</span></div>
+    <div class="row"><span class="lbl">Monthly Income</span><span class="val">&#8377;{{ number_format($loan->monthly_income ?? 0) }}</span></div>
+    <div class="row full" style="grid-column: 1 / -1;"><span class="lbl">Address</span><span class="val">{{ $loan->address }}</span></div>
+  </div>
 </div>
 
 <h3>Co-Borrower Details</h3>
@@ -61,6 +84,24 @@ h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   <div class="row"><span class="lbl">Relationship</span><span class="val">{{ $loan->co_borrower['relation'] ?? '—' }}</span></div>
   <div class="row full"><span class="lbl">Address</span><span class="val">{{ $loan->co_borrower['address'] ?? '—' }}</span></div>
 </div>
+
+@if($aadhaarUrl || $panUrl)
+<h3>Uploaded KYC Documents</h3>
+<div style="display:flex; gap:16px; margin-top:8px; margin-bottom:16px; page-break-inside:avoid;">
+  @if($aadhaarUrl)
+    <div style="flex:1; border:1px solid #E5E7EB; border-radius:8px; padding:10px; text-align:center;">
+      <p style="font-size:9px; font-weight:bold; color:#6B7280; margin-bottom:6px; text-transform:uppercase;">Aadhaar Card Attachment</p>
+      <img src="{{ $aadhaarUrl }}" style="max-width:100%; max-height:140px; object-fit:contain; border-radius:4px;" />
+    </div>
+  @endif
+  @if($panUrl)
+    <div style="flex:1; border:1px solid #E5E7EB; border-radius:8px; padding:10px; text-align:center;">
+      <p style="font-size:9px; font-weight:bold; color:#6B7280; margin-bottom:6px; text-transform:uppercase;">PAN Card Attachment</p>
+      <img src="{{ $panUrl }}" style="max-width:100%; max-height:140px; object-fit:contain; border-radius:4px;" />
+    </div>
+  @endif
+</div>
+@endif
 
 @if($loan->status === 'approved')
 <h3>Token Information</h3>

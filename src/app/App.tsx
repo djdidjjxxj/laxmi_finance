@@ -1033,7 +1033,7 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
 // ─── LOAN APPLICATION ─────────────────────────────────────────
 function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
   const [step,setStep]=useState(0);
-  const [form,setForm]=useState({ name:session.name||"", phone:"", dob:"", gender:"Male", address:"", city:"", pinCode:"", income:"", coName:"", coPhone:"", coRelation:"Spouse", coAddress:"", loanType:"Personal" as "Personal"|"Business", amount:"", tenure:33 as 33|66, purpose:"", declared:false, aadhaar:"" });
+  const [form,setForm]=useState({ name:session.name||"", phone:"", dob:"", gender:"Male", address:"", city:"", pinCode:"", income:"", coName:"", coPhone:"", coRelation:"Spouse", coAddress:"", loanType:"Personal" as "Personal"|"Business", amount:"", tenure:33 as 33|66, purpose:"", declared:false, aadhaar:"", pan:"" });
   const [files,setFiles]=useState<Record<string,{name:string;url:string}|null>>({});
   const [submitting,setSubmitting]=useState(false);
   const setF=(k:keyof typeof form,v:any)=>setForm(f=>({...f,[k]:v}));
@@ -1041,7 +1041,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
   const selEMI=safeAmt>=1000?calcEMI(safeAmt,form.tenure):null;
   const labels=["Personal Details","Co-Borrower","Loan Details","KYC Documents","Others","Review & Submit"];
   function canProceed(){
-    if(step===0){ const pin=parseInt(form.pinCode); return form.name&&form.phone.length===10&&form.aadhaar.length===12&&form.dob&&form.city&&form.address&&form.pinCode.length===6&&pin>=700108&&pin<=700131&&form.income; }
+    if(step===0){ const pin=parseInt(form.pinCode); return form.name&&form.phone.length===10&&form.aadhaar.length===12&&form.pan.length===10&&form.dob&&form.city&&form.address&&form.pinCode.length===6&&pin>=700108&&pin<=700131&&form.income; }
     if(step===1) return form.coName&&form.coPhone.length===10&&form.coAddress;
     if(step===2) return safeAmt>=1000&&form.purpose;
     if(step===3) return !!(files.aadhaar&&files.pan&&files.photo);
@@ -1069,6 +1069,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
           customer_phone: session.role==="agent" ? form.phone : undefined,
           customer_name: session.role==="agent" ? form.name : undefined,
           aadhaar: form.aadhaar,
+          pan: form.pan,
         }),
       });
       setDB(d=>({...d, applications:[...d.applications.filter(a=>a.id!==loan.id), loan]}));
@@ -1096,7 +1097,10 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               <F label="Full Name"><input value={form.name} onChange={e=>setF("name",e.target.value)} placeholder="Full name" className={inp} style={iSt}/></F>
               <F label="Mobile Number"><input type="tel" value={form.phone} onChange={e=>setF("phone",e.target.value)} maxLength={10} placeholder="10-digit" className={inp} style={iSt}/></F>
             </div>
-            <F label="Aadhaar Number"><input type="text" inputMode="numeric" value={form.aadhaar || ""} onChange={e=>setF("aadhaar",e.target.value.replace(/\D/g,"").slice(0,12))} maxLength={12} placeholder="12-digit Aadhaar number" className={inp} style={iSt}/></F>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <F label="Aadhaar Number"><input type="text" inputMode="numeric" value={form.aadhaar || ""} onChange={e=>setF("aadhaar",e.target.value.replace(/\D/g,"").slice(0,12))} maxLength={12} placeholder="12-digit Aadhaar number" className={inp} style={iSt}/></F>
+              <F label="PAN Card Number"><input type="text" value={form.pan || ""} onChange={e=>setF("pan",e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10))} maxLength={10} placeholder="10-character PAN card" className={inp} style={iSt}/></F>
+            </div>
             <F label="Date of Birth"><input type="date" value={form.dob} onChange={e=>setF("dob",e.target.value)} className={inp} style={iSt}/></F>
             <F label="Gender"><div className="flex gap-3">{["Male","Female","Other"].map(g=><button key={g} onClick={()=>setF("gender",g)} className="flex-1 py-3 rounded-2xl text-sm font-bold border-2 transition-all" style={{ borderColor:form.gender===g?TEXT:BORD, background:form.gender===g?TEXT:BG, color:form.gender===g?Y:MUTED }}>{g}</button>)}</div></F>
             <F label="Full Address"><input value={form.address} onChange={e=>setF("address",e.target.value)} placeholder="House, street, area" className={inp} style={iSt}/></F>
@@ -1182,7 +1186,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               <CheckCircle size={14} color={OK} className="mt-0.5 shrink-0"/><p className="text-xs" style={{ color:"#065F46" }}>Review all details before submitting. You cannot edit after submission.</p>
             </div>
             {[
-              { t:"Personal",    rows:[["Name",form.name||session.name],["Mobile",form.phone||"—"],["City",form.city||"—"],["PIN Code",form.pinCode||"—"],["Income",form.income?fmt(parseInt(form.income)):"—"],["Address",form.address||"—"]] },
+              { t:"Personal",    rows:[["Name",form.name||session.name],["Mobile",form.phone||"—"],["Aadhaar Number",form.aadhaar||"—"],["PAN Number",form.pan||"—"],["City",form.city||"—"],["PIN Code",form.pinCode||"—"],["Income",form.income?fmt(parseInt(form.income)):"—"],["Address",form.address||"—"]] },
               { t:"Co-Borrower", rows:[["Name",form.coName||"—"],["Mobile",form.coPhone||"—"],["Relation",form.coRelation],["Address",form.coAddress||"—"]] },
               { t:"Loan",        rows:[["Type",`${form.loanType} Loan`],["Amount",fmt(safeAmt)],["Plan",`${form.tenure} days daily`],["Daily EMI",selEMI?fmt(selEMI.daily):"—"],["Total",selEMI?fmt(selEMI.total):"—"],["Purpose",form.purpose||"—"]] },
               { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"✓ Uploaded":"Pending"],["PAN Card",files.pan?"✓ Uploaded":"Pending"],["Photo",files.photo?"✓ Captured":"Pending"]] },
@@ -1865,7 +1869,7 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>Applicant Details</p>
             <div className="grid grid-cols-2 gap-2">
-              {[["Full Name",app.customerName],["Mobile",`+91 ${app.customerPhone}`],["City",app.city],["Monthly Income",fmt(app.income||0)],["Purpose",app.purpose],["Applied On",app.createdAt]].map(([k,v])=>(
+              {[["Full Name",app.customerName],["Mobile",`+91 ${app.customerPhone}`],["Aadhaar Card",app.aadhaar||"—"],["PAN Card",app.pan||"—"],["City",app.city],["Monthly Income",fmt(app.income||0)],["Purpose",app.purpose],["Applied On",app.createdAt]].map(([k,v])=>(
                 <div key={k} className="p-3 rounded-2xl" style={{ background:BG }}><p className="text-[9px] font-semibold" style={{ color:MUTED }}>{k}</p><p className="text-sm font-bold mt-0.5 truncate" style={{ color:TEXT }}>{v}</p></div>
               ))}
               <div className="p-3 rounded-2xl col-span-2" style={{ background:BG }}><p className="text-[9px] font-semibold" style={{ color:MUTED }}>Address</p><p className="text-sm font-bold mt-0.5" style={{ color:TEXT }}>{app.address||"—"}</p></div>
