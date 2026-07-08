@@ -72,8 +72,13 @@ class LoanController extends Controller
             $agentId = null;
 
             if ($user->role === 'agent' && $request->filled('customer_phone')) {
-                $customer = User::where('phone', $request->customer_phone)->where('role', 'customer')->first();
-                if (! $customer) {
+                $existingUser = User::where('phone', $request->customer_phone)->first();
+                if ($existingUser) {
+                    if ($existingUser->role !== 'customer') {
+                        return response()->json(['message' => 'The phone number is already registered as an ' . $existingUser->role], 422);
+                    }
+                    $customer = $existingUser;
+                } else {
                     $customer = User::create([
                         'name' => $request->customer_name ?? 'Customer',
                         'phone' => $request->customer_phone,

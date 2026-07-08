@@ -34,3 +34,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/uploads', [LoanController::class, 'upload']);
 });
+
+Route::get('/temp-reset-db-identity', function() {
+    \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+    \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE loan_applications RESTART IDENTITY CASCADE');
+    \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE customer_profiles RESTART IDENTITY CASCADE');
+    \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE agent_logs RESTART IDENTITY CASCADE');
+    \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+    
+    // Recreate admin
+    \App\Models\User::create([
+        'name' => 'Admin',
+        'email' => 'laxmifinance_admin',
+        'phone' => '9999999999',
+        'password' => '25951046',
+        'role' => 'admin',
+        'is_active' => true,
+    ]);
+    \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+    return response()->json(['success' => true]);
+});
