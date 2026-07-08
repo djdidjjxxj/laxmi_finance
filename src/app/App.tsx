@@ -227,9 +227,35 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 419) { csrfReady = null; }
-    // Only trigger logout on 401 for real authenticated actions, not for the session check
-    if ((res.status === 401 || res.status === 419) && path !== '/auth/session' && path !== '/health') {
+    if (res.status === 419) {
+      // CSRF expired — refresh token and retry once
+      csrfReady = null;
+      await ensureCsrf();
+      // Retry the request once with fresh CSRF
+      const xsrf2 = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.split('=')[1];
+      const res2 = await fetch(`/api${path}`, {
+        ...opts,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(xsrf2 ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrf2) } : {}),
+          ...(opts.headers as Record<string, string> || {}),
+        },
+      });
+      const data2 = await res2.json().catch(() => ({}));
+      if (!res2.ok) {
+        if (res2.status === 401) {
+          toast.error('Session expired. Please log in again.');
+          if (globalTriggerLogout) globalTriggerLogout();
+        }
+        throw new Error(data2.message || `Request failed: ${res2.status}`);
+      }
+      return data2;
+    }
+    // On 401: redirect to login with friendly message (don't wipe data)
+    if (res.status === 401 && path !== '/auth/session' && path !== '/health') {
+      toast.error('Session expired. Please log in again.');
       if (globalTriggerLogout) globalTriggerLogout();
     }
     throw new Error(data.message || `Request failed: ${res.status}`);
@@ -2581,10 +2607,10 @@ export default function App() {
     };
 
     globalTriggerLogout = () => {
+      // Navigate to login — keep localStorage so user can re-login easily
+      // Only a manual logout (clicking the logout button) should wipe localStorage
       setSession({ role: null, userId: "", name: "" });
-      setScreen("splash");
-      setDB(INIT_DB);
-      localStorage.removeItem('lf_session');
+      setScreen("login");
     };
 
     // Restore session instantly from localStorage before fetching server status
