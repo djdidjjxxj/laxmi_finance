@@ -79,7 +79,7 @@ class LoanController extends Controller
                         'phone' => $request->customer_phone,
                         'password' => 'laxmi' . $request->customer_phone,
                         'role' => 'customer',
-                        'customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad(User::count() + 1, 6, '0', STR_PAD_LEFT),
+                        'customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad((User::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
                     ]);
                 }
                 $customerId = $customer->id;
@@ -91,7 +91,7 @@ class LoanController extends Controller
             $dailyEMI = ($tenure == 33) ? round($amount * 0.04) : round($amount * 0.02);
             $totalPayable = $dailyEMI * $tenure;
 
-            $appNumber = 'LFN-TMP-' . date('Y') . '-' . str_pad(LoanApplication::count() + 1, 6, '0', STR_PAD_LEFT);
+            $appNumber = 'LFN-TMP-' . date('Y') . '-' . str_pad((LoanApplication::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT);
 
             // Core loan data (always works)
             $loanData = [

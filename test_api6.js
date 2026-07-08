@@ -6,7 +6,15 @@ async function test() {
     const csrfRes = await f('https://laxmi-finance.onrender.com/sanctum/csrf-cookie', {
         headers: { 'Origin': 'https://laxmi-finance.onrender.com' }
     });
-    let rawCookies = csrfRes.headers.raw()['set-cookie'] || [];
+    
+    let rawCookies = [];
+    if (typeof csrfRes.headers.getSetCookie === 'function') {
+        rawCookies = csrfRes.headers.getSetCookie();
+    } else {
+        const val = csrfRes.headers.get('set-cookie');
+        if (val) rawCookies = [val];
+    }
+    
     let cookiesStr = rawCookies.map(c => c.split(';')[0]).join('; ');
     let xsrfToken = '';
     rawCookies.forEach(c => {
@@ -39,7 +47,14 @@ async function test() {
     
     if (regRes.status !== 201) return;
     
-    let newCookies = regRes.headers.raw()['set-cookie'] || [];
+    let newCookies = [];
+    if (typeof regRes.headers.getSetCookie === 'function') {
+        newCookies = regRes.headers.getSetCookie();
+    } else {
+        const val = regRes.headers.get('set-cookie');
+        if (val) newCookies = [val];
+    }
+    
     cookiesStr = newCookies.map(c => c.split(';')[0]).join('; ');
     newCookies.forEach(c => {
         if (c.startsWith('XSRF-TOKEN=')) {
