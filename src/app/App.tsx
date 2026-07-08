@@ -339,8 +339,13 @@ function esc(s:string|number):string { return String(s).replace(/&/g,'&amp;').re
 
 // ─── Print application ────────────────────────────────────────
 function printApplication(app: LoanApp) {
-  const w = window.open("", "_blank", "width=860,height=680");
-  if (!w) { toast.error("Allow popups to print"); return; }
+  function openPrint(html: string) {
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    const w = window.open(blobUrl, '_blank', 'width=860,height=680');
+    if (!w) toast.error("Allow popups to print");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  }
   
   const photo = app.documents?.photo || app.customerPhoto;
   const aadhaarImg = app.documents?.aadhaar;
@@ -439,15 +444,20 @@ function printApplication(app: LoanApp) {
   ` : ''}
 
   <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
-  </body></html>`);
-  w.document.close();
+  </body></html>`;
+  openPrint(html);
 }
 
 function printLoanAgreement(app: LoanApp) {
-  const w = window.open("", "_blank", "width=860,height=900");
-  if (!w) { toast.error("Allow popups to print"); return; }
+  function openPrint(html: string) {
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    const w = window.open(blobUrl, '_blank', 'width=860,height=900');
+    if (!w) toast.error("Allow popups to print");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  }
   const today = new Date().toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric" });
-  w.document.write(`<!DOCTYPE html><html><head><title>Loan Agreement - ${app.id}</title><style>
+  const html = `<!DOCTYPE html><html><head><title>Loan Agreement - ${app.id}</title><style>
     *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:40px;color:#111;font-size:13px;line-height:1.7}
     .hdr{text-align:center;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #F5C518}
     .logo{font-size:22px;font-weight:800;margin-bottom:4px}
@@ -512,8 +522,8 @@ function printLoanAgreement(app: LoanApp) {
   <div class="stamp">LAXMI FINANCE LTD. · OFFICIAL LOAN AGREEMENT · ${app.id}</div>
   <div class="footer">This is a computer-generated document. · Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
   <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
-  </body></html>`);
-  w.document.close();
+  </body></html>`;
+  openPrint(html);
 }
 
 // ─── Shared UI ────────────────────────────────────────────────
@@ -2027,10 +2037,11 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(docs).map(([key,url])=>(
                   <div key={key} onClick={() => {
-                    const newWin = window.open();
-                    if (newWin) {
-                      newWin.document.write(`<html><head><title>${docLabels[key] || key}</title></head><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#111;min-height:100vh;"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain;margin:auto;"/></body></html>`);
-                    }
+                    if (!url) return;
+                    const html = `<!DOCTYPE html><html><head><title>${docLabels[key] || key}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column}img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}p{color:#aaa;margin-top:12px;font-family:sans-serif;font-size:13px}</style></head><body><img src="${url}" /><p>${docLabels[key] || key}</p></body></html>`;
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    window.open(blobUrl, '_blank');
                   }} className="block rounded-2xl overflow-hidden border-2 hover:shadow-lg transition-shadow cursor-pointer animate-fadeIn" style={{ borderColor:BORD }}>
                     <div className="h-28 bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img src={url as string} alt={docLabels[key]||key} className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none';(e.target as HTMLImageElement).parentElement!.innerHTML=`<div class="flex flex-col items-center gap-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${MUTED}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg><span style="font-size:10px;color:${MUTED}">View File</span></div>`;}}/>
