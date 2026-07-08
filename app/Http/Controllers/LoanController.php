@@ -46,107 +46,114 @@ class LoanController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $request->validate([
-            'loan_type' => ['required', 'string', 'in:Personal,Business'],
-            'amount' => ['required', 'integer', 'min:1000', 'max:20000'],
-            'tenure_days' => ['required', 'integer', 'in:33,66'],
-            'purpose' => ['required', 'string'],
-            'city' => ['required', 'string'],
-            'address' => ['required', 'string'],
-            'monthly_income' => ['required', 'integer'],
-            'co_borrower' => ['required', 'array'],
-            'co_borrower.name' => ['required', 'string'],
-            'co_borrower.phone' => ['required', 'string'],
-            'co_borrower.relation' => ['required', 'string'],
-            'co_borrower.address' => ['required', 'string'],
-            'documents' => ['nullable', 'array'],
-            'customer_phone' => ['nullable', 'string', 'size:10'],
-            'customer_name' => ['nullable', 'string', 'max:255'],
-            'aadhaar' => ['nullable', 'string', 'size:12'],
-            'pan' => ['nullable', 'string', 'size:10'],
-        ]);
-
-        $user = $request->user();
-        $customerId = $user->id;
-        $agentId = null;
-
-        if ($user->role === 'agent' && $request->filled('customer_phone')) {
-            $customer = User::where('phone', $request->customer_phone)->where('role', 'customer')->first();
-            if (! $customer) {
-                $customer = User::create([
-                    'name' => $request->customer_name ?? 'Customer',
-                    'phone' => $request->customer_phone,
-                    'password' => 'laxmi' . $request->customer_phone,
-                    'role' => 'customer',
-                    'customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad(User::count() + 1, 6, '0', STR_PAD_LEFT),
-                ]);
-            }
-            $customerId = $customer->id;
-            $agentId = $user->id;
-        }
-
-        $amount = $request->amount;
-        $tenure = $request->tenure_days;
-        $dailyEMI = ($tenure == 33) ? round($amount * 0.04) : round($amount * 0.02);
-        $totalPayable = $dailyEMI * $tenure;
-
-        $appNumber = 'LFN-TMP-' . date('Y') . '-' . str_pad(LoanApplication::count() + 1, 6, '0', STR_PAD_LEFT);
-
-        // Core loan data (always works)
-        $loanData = [
-            'customer_id'       => $customerId,
-            'application_number'=> $appNumber,
-            'loan_type'         => $request->loan_type,
-            'amount'            => $amount,
-            'tenure_days'       => $tenure,
-            'daily_emi'         => $dailyEMI,
-            'total_payable'     => $totalPayable,
-            'status'            => 'pending',
-            'purpose'           => $request->purpose,
-            'city'              => $request->city,
-            'address'           => $request->address,
-            'monthly_income'    => $request->monthly_income,
-            'co_borrower'       => $request->co_borrower,
-            'documents'         => $request->documents ?? [],
-            'assigned_agent_id' => $agentId,
-        ];
-
-        // Add aadhaar/pan only if columns exist (safe migration handling)
-        if (\Illuminate\Support\Facades\Schema::hasColumn('loan_applications', 'aadhaar')) {
-            $loanData['aadhaar'] = $request->aadhaar;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('loan_applications', 'pan')) {
-            $loanData['pan'] = $request->pan;
-        }
-
-        $loan = LoanApplication::create($loanData);
-
-        $customerUser = User::find($customerId);
-        $customerName = $customerUser ? $customerUser->name : 'Customer';
-
-        // Update customer profile — wrapped in try-catch so it never crashes the main request
         try {
-            $profileData = [
-                'aadhaar_name'   => $customerName,
-                'city'           => $request->city,
-                'address'        => $request->address,
-                'monthly_income' => $request->monthly_income,
-            ];
-            if (\Illuminate\Support\Facades\Schema::hasColumn('customer_profiles', 'aadhaar')) {
-                $profileData['aadhaar'] = $request->aadhaar;
-            }
-            if (\Illuminate\Support\Facades\Schema::hasColumn('customer_profiles', 'pan')) {
-                $profileData['pan'] = $request->pan;
-            }
-            CustomerProfile::updateOrCreate(['user_id' => $customerId], $profileData);
-        } catch (\Exception $e) {
-            // Profile update failed — not critical, loan was already saved
-            \Illuminate\Support\Facades\Log::warning('CustomerProfile update failed: ' . $e->getMessage());
-        }
+            $request->validate([
+                'loan_type' => ['required', 'string', 'in:Personal,Business'],
+                'amount' => ['required', 'integer', 'min:1000', 'max:20000'],
+                'tenure_days' => ['required', 'integer', 'in:33,66'],
+                'purpose' => ['required', 'string'],
+                'city' => ['required', 'string'],
+                'address' => ['required', 'string'],
+                'monthly_income' => ['required', 'integer'],
+                'co_borrower' => ['required', 'array'],
+                'co_borrower.name' => ['required', 'string'],
+                'co_borrower.phone' => ['required', 'string'],
+                'co_borrower.relation' => ['required', 'string'],
+                'co_borrower.address' => ['required', 'string'],
+                'documents' => ['nullable', 'array'],
+                'customer_phone' => ['nullable', 'string', 'size:10'],
+                'customer_name' => ['nullable', 'string', 'max:255'],
+                'aadhaar' => ['nullable', 'string', 'size:12'],
+                'pan' => ['nullable', 'string', 'size:10'],
+            ]);
 
-        return response()->json([
-            'loan' => $this->formatApp($loan->load(['customer', 'assignedAgent'])),
-        ], 201);
+            $user = $request->user();
+            $customerId = $user->id;
+            $agentId = null;
+
+            if ($user->role === 'agent' && $request->filled('customer_phone')) {
+                $customer = User::where('phone', $request->customer_phone)->where('role', 'customer')->first();
+                if (! $customer) {
+                    $customer = User::create([
+                        'name' => $request->customer_name ?? 'Customer',
+                        'phone' => $request->customer_phone,
+                        'password' => 'laxmi' . $request->customer_phone,
+                        'role' => 'customer',
+                        'customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad(User::count() + 1, 6, '0', STR_PAD_LEFT),
+                    ]);
+                }
+                $customerId = $customer->id;
+                $agentId = $user->id;
+            }
+
+            $amount = $request->amount;
+            $tenure = $request->tenure_days;
+            $dailyEMI = ($tenure == 33) ? round($amount * 0.04) : round($amount * 0.02);
+            $totalPayable = $dailyEMI * $tenure;
+
+            $appNumber = 'LFN-TMP-' . date('Y') . '-' . str_pad(LoanApplication::count() + 1, 6, '0', STR_PAD_LEFT);
+
+            // Core loan data (always works)
+            $loanData = [
+                'customer_id'       => $customerId,
+                'application_number'=> $appNumber,
+                'loan_type'         => $request->loan_type,
+                'amount'            => $amount,
+                'tenure_days'       => $tenure,
+                'daily_emi'         => $dailyEMI,
+                'total_payable'     => $totalPayable,
+                'status'            => 'pending',
+                'purpose'           => $request->purpose,
+                'city'              => $request->city,
+                'address'           => $request->address,
+                'monthly_income'    => $request->monthly_income,
+                'co_borrower'       => $request->co_borrower,
+                'documents'         => $request->documents ?? [],
+                'assigned_agent_id' => $agentId,
+            ];
+
+            // Add aadhaar/pan only if columns exist (safe migration handling)
+            if (\Illuminate\Support\Facades\Schema::hasColumn('loan_applications', 'aadhaar')) {
+                $loanData['aadhaar'] = $request->aadhaar;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('loan_applications', 'pan')) {
+                $loanData['pan'] = $request->pan;
+            }
+
+            $loan = LoanApplication::create($loanData);
+
+            $customerUser = User::find($customerId);
+            $customerName = $customerUser ? $customerUser->name : 'Customer';
+
+            // Update customer profile — wrapped in try-catch so it never crashes the main request
+            try {
+                $profileData = [
+                    'aadhaar_name'   => $customerName,
+                    'city'           => $request->city,
+                    'address'        => $request->address,
+                    'monthly_income' => $request->monthly_income,
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('customer_profiles', 'aadhaar')) {
+                    $profileData['aadhaar'] = $request->aadhaar;
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('customer_profiles', 'pan')) {
+                    $profileData['pan'] = $request->pan;
+                }
+                CustomerProfile::updateOrCreate(['user_id' => $customerId], $profileData);
+            } catch (\Exception $e) {
+                // Profile update failed — not critical, loan was already saved
+                \Illuminate\Support\Facades\Log::warning('CustomerProfile update failed: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'loan' => $this->formatApp($loan->load(['customer', 'assignedAgent'])),
+            ], 201);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Loan creation error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'message' => '500_DEBUG: ' . $e->getMessage() . ' on line ' . $e->getLine() . ' in ' . basename($e->getFile())
+            ], 500);
+        }
     }
 
 
