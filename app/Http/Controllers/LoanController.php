@@ -341,11 +341,18 @@ class LoanController extends Controller
         return response()->json(['message' => 'Account deleted successfully']);
     }
 
-    public function pdf(string $id)
+    public function pdf(Request $request, string $id)
     {
         $loan = LoanApplication::where('application_number', $id)
             ->with(['customer', 'assignedAgent'])
             ->firstOrFail();
+
+        $user = $request->user();
+
+        // Customers can only view their own loan PDFs
+        if ($user->role === 'customer' && (int)$loan->customer_id !== $user->id) {
+            abort(403, 'You are not authorized to view this document.');
+        }
 
         return view('pdf.loan-application', ['loan' => $loan]);
     }

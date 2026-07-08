@@ -203,11 +203,6 @@ async function apiWithRetry(path: string, opts: RequestInit = {}, attempt = 0): 
         await new Promise(r => setTimeout(r, delay));
         return apiWithRetry(path, opts, attempt + 1);
       }
-      // Handle unauthorised (401) on first attempt – refresh auth header and retry once
-      if (errMsg.includes("401") && attempt === 0) {
-        await refreshAuthHeader();
-        return apiWithRetry(path, opts, 1);
-      }
       throw err;
     }
 }
@@ -999,6 +994,8 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
     if(!name.trim()){setErr("Enter your full name");return;}
     if(pw.length<6){setErr("Password must be at least 6 characters");return;}
     if(pw!==conf){setErr("Passwords do not match");return;}
+    setLoading(true);
+    setErr("");
     try {
       const { user } = await api('/auth/register', {
         method: 'POST',
@@ -1007,12 +1004,11 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
       setDB(d=>({...d,customers:[...d.customers,{id:String(user.id),name:user.name,phone:user.phone,password:"",token:user.token||"",createdAt:new Date().toLocaleDateString("en-IN")}]}));
       setToken(user.token||"");
       setSession({role:"customer",userId:String(user.id),name:user.name});
-      try {
-        setLoading(true); const data = await api('/data'); setDB(d=>({...d,...data})); } catch {}
+      try { const data = await api('/data'); setDB(d=>({...d,...data})); } catch {}
       setStep(2);
       toast.success("Account created!");
-      setLoading(false);
-    } catch(e:any) { setErr(e.message||"Registration failed. Try again."); setLoading(false); }
+    } catch(e:any) { setErr(e.message||"Registration failed. Try again."); }
+    setLoading(false);
   }
   return (
     <div className="flex flex-col min-h-screen" style={{ background:BG }}>
@@ -1057,7 +1053,7 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
               </F>
               <F label="Confirm Password"><input type="password" value={conf} onChange={e=>setConf(e.target.value)} placeholder="Re-enter password" className={inp} style={{ ...iSt, borderColor:conf&&conf!==pw?ERR:BORD }}/></F>
               {err&&<p className="text-xs font-semibold" style={{ color:ERR }}>{err}</p>}
-              <button onClick={create} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>{loading ? <><RefreshCw className="animate-spin mr-2"/>Creating...</> : "Create Account"}</button>
+              <button onClick={create} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background:loading?"#F5C518":Y, color:TEXT, opacity:loading?0.85:1 }}>{loading ? <><RefreshCw className="animate-spin" size={16}/><span>Creating your account...</span></> : "Create Account"}</button>
             </div>
           )}
           {step===2&&(
@@ -1247,17 +1243,31 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
     if(!selEMI||submitting) return;
     setSubmitting(true);
     try {
+      // Step 1: Upload each document to the server first and get back file paths.
+      // This keeps the loan JSON small and avoids CSRF/session issues from large payloads.
       const docs: Record<string, string> = {};
       for (const [key, file] of Object.entries(files)) {
         if (file) {
           try {
-            const base64 = await fileToBase64(file.url);
-            docs[key] = await compressImage(base64);
+            // Use apiUpload to POST the file as multipart/form-data and get a /storage/… path
+            const path = await apiUpload(file.url, `${key}-${Date.now()}.jpg`);
+            docs[key] = path;
           } catch {
-            docs[key] = 'local';
+            // Fallback: compress and embed as base64 (smaller, ~50–80 KB per image)
+            try {
+              const base64 = await fileToBase64(file.url);
+              docs[key] = await compressImage(base64, 600, 600, 0.6);
+            } catch {
+              docs[key] = 'local';
+            }
           }
         }
       }
+
+      // Step 2: Fresh CSRF token before the loan POST (prevents stale-token 419 → 401 loop)
+      csrfReady = null;
+      await ensureCsrf();
+
       const { loan } = await api('/loans', {
         method: 'POST',
         body: JSON.stringify({
