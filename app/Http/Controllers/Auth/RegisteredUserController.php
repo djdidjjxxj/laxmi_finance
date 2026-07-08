@@ -38,10 +38,14 @@ class RegisteredUserController extends Controller
         ];
 
         if ($role === 'customer') {
-            $userData['customer_token'] = 'LFN-TMP-' . date('Y') . '-' . str_pad((User::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT);
+            $userData['customer_token'] = uniqid('tmp_');
         }
 
         $user = User::create($userData);
+
+        if ($role === 'customer') {
+            $user->update(['customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad($user->id, 6, '0', STR_PAD_LEFT)]);
+        }
 
         if ($role === 'agent' && $request->filled('zone')) {
             $user->customerProfile()->updateOrCreate(

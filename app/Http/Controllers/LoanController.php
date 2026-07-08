@@ -84,8 +84,9 @@ class LoanController extends Controller
                         'phone' => $request->customer_phone,
                         'password' => 'laxmi' . $request->customer_phone,
                         'role' => 'customer',
-                        'customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad((User::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
+                        'customer_token' => uniqid('tmp_'),
                     ]);
+                    $customer->update(['customer_token' => 'LFN-TMP-' . date('Y') . '-' . str_pad($customer->id, 6, '0', STR_PAD_LEFT)]);
                 }
                 $customerId = $customer->id;
                 $agentId = $user->id;
@@ -96,12 +97,10 @@ class LoanController extends Controller
             $dailyEMI = ($tenure == 33) ? round($amount * 0.04) : round($amount * 0.02);
             $totalPayable = $dailyEMI * $tenure;
 
-            $appNumber = 'LFN-TMP-' . date('Y') . '-' . str_pad((LoanApplication::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT);
-
             // Core loan data (always works)
             $loanData = [
                 'customer_id'       => $customerId,
-                'application_number'=> $appNumber,
+                'application_number'=> uniqid('tmp_'),
                 'loan_type'         => $request->loan_type,
                 'amount'            => $amount,
                 'tenure_days'       => $tenure,
@@ -126,6 +125,9 @@ class LoanController extends Controller
             }
 
             $loan = LoanApplication::create($loanData);
+            
+            // Update the application number with the real database ID to completely prevent duplicates/mismatches
+            $loan->update(['application_number' => 'LFN-TMP-' . date('Y') . '-' . str_pad($loan->id, 6, '0', STR_PAD_LEFT)]);
 
             $customerUser = User::find($customerId);
             $customerName = $customerUser ? $customerUser->name : 'Customer';
