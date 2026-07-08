@@ -34,12 +34,3 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/uploads', [LoanController::class, 'upload']);
 });
-
-Route::get('/temp-reset-db', function() {
-    \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
-    \App\Models\LoanApplication::truncate();
-    \App\Models\CustomerProfile::truncate();
-    \App\Models\User::where('role', 'customer')->delete();
-    \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
-    return response()->json(['success' => true]);
-});
