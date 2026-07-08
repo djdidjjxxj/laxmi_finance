@@ -341,19 +341,38 @@ function esc(s:string|number):string { return String(s).replace(/&/g,'&amp;').re
 function printApplication(app: LoanApp) {
   const w = window.open("", "_blank", "width=860,height=680");
   if (!w) { toast.error("Allow popups to print"); return; }
-  w.document.write(`<!DOCTYPE html><html><head><title>${app.id}</title><style>
-    *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:32px;color:#111;font-size:13px}
+  
+  const photo = app.documents?.photo || app.customerPhoto;
+  const aadhaarImg = app.documents?.aadhaar;
+  const panImg = app.documents?.pan;
+
+  w.document.write(`<!DOCTYPE html><html><head><title>Loan Application - ${app.id}</title><style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;padding:32px;color:#111;font-size:13px;line-height:1.4}
     .hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:14px;border-bottom:3px solid #F5C518}
     .logo{font-size:22px;font-weight:800}.id{background:#FFF9E6;border:2px solid #F5C518;border-radius:8px;padding:5px 14px;font-weight:700}
     h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#C8961A;margin:20px 0 10px;padding-bottom:5px;border-bottom:1px solid #F5C518}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:0}.row{padding:7px 0;border-bottom:1px solid #F3F4F6;display:flex;flex-direction:column;gap:2px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+    .row{padding:7px 0;border-bottom:1px solid #F3F4F6;display:flex;flex-direction:column;gap:2px}
     .lbl{font-size:10px;color:#6B7280}.val{font-weight:600}.full{grid-column:1/-1}
+    .profile-container{display:flex;gap:24px;align-items:flex-start}
+    .profile-details{flex:1}
+    .profile-photo{width:110px;height:130px;object-fit:cover;border:2px solid #E5E7EB;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);margin-top:4px}
     .sig-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:48px}
     .sig{border-top:1px solid #111;padding-top:6px;font-size:11px;color:#6B7280}
     .footer{margin-top:32px;padding-top:12px;border-top:1px solid #E5E7EB;font-size:10px;color:#9CA3AF;text-align:center}
-    @media print{body{padding:20px}}
+    .page-break{page-break-before:always}
+    .doc-box{border:1px solid #E5E7EB;border-radius:8px;padding:12px;text-align:center;background:#FAFAFA}
+    .doc-title{font-weight:700;font-size:10px;color:#4B5563;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em}
+    .doc-img{max-width:100%;max-height:220px;object-fit:contain;border-radius:4px;border:1px solid #E5E7EB;background:#fff}
+    @media print{
+      body{padding:20px}
+      .no-print{display:none}
+      .page-break{page-break-before:always}
+    }
   </style></head><body>
   <div class="hdr"><div class="logo">🏛 Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
+  
   <h3>Loan Details</h3>
   <div class="grid">
     <div class="row"><span class="lbl">Loan Type</span><span class="val">${app.loanType} Loan</span></div>
@@ -366,14 +385,23 @@ function printApplication(app: LoanApp) {
     <div class="row"><span class="lbl">Applied On</span><span class="val">${esc(app.createdAt)}</span></div>
     <div class="row"><span class="lbl">Assigned Agent</span><span class="val">${esc(app.assignedAgent||"Unassigned")}</span></div>
   </div>
+
   <h3>Applicant Details</h3>
-  <div class="grid">
-    <div class="row"><span class="lbl">Full Name</span><span class="val">${esc(app.customerName)}</span></div>
-    <div class="row"><span class="lbl">Mobile</span><span class="val">+91 ${esc(app.customerPhone)}</span></div>
-    <div class="row"><span class="lbl">City</span><span class="val">${esc(app.city)}</span></div>
-    <div class="row"><span class="lbl">Monthly Income</span><span class="val">₹${(app.income||0).toLocaleString("en-IN")}</span></div>
-    <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.address)}</span></div>
+  <div class="profile-container">
+    <div class="profile-details">
+      <div class="grid">
+        <div class="row"><span class="lbl">Full Name</span><span class="val">${esc(app.customerName)}</span></div>
+        <div class="row"><span class="lbl">Mobile</span><span class="val">+91 ${esc(app.customerPhone)}</span></div>
+        <div class="row"><span class="lbl">Aadhaar Number</span><span class="val">${esc(app.aadhaar || "—")}</span></div>
+        <div class="row"><span class="lbl">PAN Number</span><span class="val">${esc(app.pan || "—")}</span></div>
+        <div class="row"><span class="lbl">City</span><span class="val">${esc(app.city)}</span></div>
+        <div class="row"><span class="lbl">Monthly Income</span><span class="val">₹${(app.income||0).toLocaleString("en-IN")}</span></div>
+        <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.address)}</span></div>
+      </div>
+    </div>
+    ${photo ? `<div><img src="${photo}" class="profile-photo" /></div>` : ''}
   </div>
+
   <h3>Co-Borrower Details</h3>
   <div class="grid">
     <div class="row"><span class="lbl">Full Name</span><span class="val">${esc(app.coBorrowerName||"—")}</span></div>
@@ -381,11 +409,35 @@ function printApplication(app: LoanApp) {
     <div class="row"><span class="lbl">Relationship</span><span class="val">${esc(app.coBorrowerRelation||"—")}</span></div>
     <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.coBorrowerAddress||"—")}</span></div>
   </div>
+
   <div class="sig-row">
     <div class="sig">Applicant Signature</div><div class="sig">Co-Borrower Signature</div>
     <div class="sig">Authorised Signatory — Laxmi Finance</div><div class="sig">Date</div>
   </div>
-  <div class="footer">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")} · Computer generated document</div>
+  
+  <div class="footer">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
+
+  ${(aadhaarImg || panImg) ? `
+    <div class="page-break"></div>
+    <div class="hdr"><div class="logo">🏛 Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
+    <h3>Uploaded KYC Documents</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px;">
+      ${aadhaarImg ? `
+        <div class="doc-box">
+          <div class="doc-title">Aadhaar Card</div>
+          <img src="${aadhaarImg}" class="doc-img" />
+        </div>
+      ` : ''}
+      ${panImg ? `
+        <div class="doc-box">
+          <div class="doc-title">PAN Card</div>
+          <img src="${panImg}" class="doc-img" />
+        </div>
+      ` : ''}
+    </div>
+    <div class="footer" style="margin-top: 64px;">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
+  ` : ''}
+
   <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
   </body></html>`);
   w.document.close();
