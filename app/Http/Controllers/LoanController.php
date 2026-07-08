@@ -92,45 +92,63 @@ class LoanController extends Controller
 
         $appNumber = 'LFN-TMP-' . date('Y') . '-' . str_pad(LoanApplication::count() + 1, 6, '0', STR_PAD_LEFT);
 
-        $loan = LoanApplication::create([
-            'customer_id' => $customerId,
-            'application_number' => $appNumber,
-            'loan_type' => $request->loan_type,
-            'amount' => $amount,
-            'tenure_days' => $tenure,
-            'daily_emi' => $dailyEMI,
-            'total_payable' => $totalPayable,
-            'status' => 'pending',
-            'purpose' => $request->purpose,
-            'city' => $request->city,
-            'address' => $request->address,
-            'monthly_income' => $request->monthly_income,
-            'co_borrower' => $request->co_borrower,
-            'documents' => $request->documents ?? [],
+        // Core loan data (always works)
+        $loanData = [
+            'customer_id'       => $customerId,
+            'application_number'=> $appNumber,
+            'loan_type'         => $request->loan_type,
+            'amount'            => $amount,
+            'tenure_days'       => $tenure,
+            'daily_emi'         => $dailyEMI,
+            'total_payable'     => $totalPayable,
+            'status'            => 'pending',
+            'purpose'           => $request->purpose,
+            'city'              => $request->city,
+            'address'           => $request->address,
+            'monthly_income'    => $request->monthly_income,
+            'co_borrower'       => $request->co_borrower,
+            'documents'         => $request->documents ?? [],
             'assigned_agent_id' => $agentId,
-            'aadhaar' => $request->aadhaar,
-            'pan' => $request->pan,
-        ]);
+        ];
+
+        // Add aadhaar/pan only if columns exist (safe migration handling)
+        if (\Illuminate\Support\Facades\Schema::hasColumn('loan_applications', 'aadhaar')) {
+            $loanData['aadhaar'] = $request->aadhaar;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('loan_applications', 'pan')) {
+            $loanData['pan'] = $request->pan;
+        }
+
+        $loan = LoanApplication::create($loanData);
 
         $customerUser = User::find($customerId);
         $customerName = $customerUser ? $customerUser->name : 'Customer';
 
-        CustomerProfile::updateOrCreate(
-            ['user_id' => $customerId],
-            [
-                'aadhaar_name' => $customerName,
-                'city' => $request->city,
-                'address' => $request->address,
+        // Update customer profile — wrapped in try-catch so it never crashes the main request
+        try {
+            $profileData = [
+                'aadhaar_name'   => $customerName,
+                'city'           => $request->city,
+                'address'        => $request->address,
                 'monthly_income' => $request->monthly_income,
-                'aadhaar' => $request->aadhaar,
-                'pan' => $request->pan,
-            ]
-        );
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('customer_profiles', 'aadhaar')) {
+                $profileData['aadhaar'] = $request->aadhaar;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('customer_profiles', 'pan')) {
+                $profileData['pan'] = $request->pan;
+            }
+            CustomerProfile::updateOrCreate(['user_id' => $customerId], $profileData);
+        } catch (\Exception $e) {
+            // Profile update failed — not critical, loan was already saved
+            \Illuminate\Support\Facades\Log::warning('CustomerProfile update failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'loan' => $this->formatApp($loan->load(['customer', 'assignedAgent'])),
         ], 201);
     }
+
 
     public function updateStatus(Request $request, string $id): JsonResponse
     {

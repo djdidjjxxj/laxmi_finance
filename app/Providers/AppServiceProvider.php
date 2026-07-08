@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Artisan;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,13 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Auto-run pending migrations so Render deployments always have the latest schema
-        try {
-            Artisan::call('migrate', ['--force' => true]);
-        } catch (\Exception $e) {
-            // Silently ignore — database may not be reachable yet
-        }
-
         // Dynamically register the current host as a Sanctum stateful domain
         if (isset($_SERVER['HTTP_X_FORWARDED_HOST'])) {
             $host = $_SERVER['HTTP_X_FORWARDED_HOST'];
