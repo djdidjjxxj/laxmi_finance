@@ -185,26 +185,31 @@ async function processQueue() {
 }
 
 async function apiWithRetry(path: string, opts: RequestInit = {}, attempt = 0): Promise<any> {
-  const retryDelays = [5000, 10000, 20000, 20000, 20000];
-  const maxRetries = 5;
+    const retryDelays = [5000, 10000, 20000, 20000, 20000];
+    const maxRetries = 5;
 
-  try {
-    return await executeFetch(path, opts);
-  } catch (err: any) {
-    const errMsg = err.message || "";
-    const isNetworkError = errMsg.includes("Failed to fetch") || 
-                          errMsg.includes("NetworkError") || 
-                          errMsg.includes("502") || 
-                          errMsg.includes("503") || 
-                          errMsg.includes("504");
-    if (isNetworkError && attempt < maxRetries) {
-      const delay = retryDelays[attempt] || 20000;
-      setWakingState(true, `Retrying connection (${attempt + 1}/${maxRetries})...`);
-      await new Promise(r => setTimeout(r, delay));
-      return apiWithRetry(path, opts, attempt + 1);
+    try {
+      return await executeFetch(path, opts);
+    } catch (err: any) {
+      const errMsg = err.message || "";
+      const isNetworkError = errMsg.includes("Failed to fetch") || 
+                            errMsg.includes("NetworkError") || 
+                            errMsg.includes("502") || 
+                            errMsg.includes("503") || 
+                            errMsg.includes("504");
+      if (isNetworkError && attempt < maxRetries) {
+        const delay = retryDelays[attempt] || 20000;
+        setWakingState(true, `Retrying connection (${attempt + 1}/${maxRetries})...`);
+        await new Promise(r => setTimeout(r, delay));
+        return apiWithRetry(path, opts, attempt + 1);
+      }
+      // Handle unauthorised (401) on first attempt – refresh auth header and retry once
+      if (errMsg.includes("401") && attempt === 0) {
+        await refreshAuthHeader();
+        return apiWithRetry(path, opts, 1);
+      }
+      throw err;
     }
-    throw err;
-  }
 }
 
 async function executeFetch(path: string, opts: RequestInit = {}) {
@@ -934,7 +939,7 @@ function OTPInput({ onComplete }: { onComplete?: (val: string) => void }) {
 function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
   const [step,setStep]=useState(0); const [phone,setPhone]=useState(""); const [name,setName]=useState("");
   const [pw,setPw]=useState(""); const [conf,setConf]=useState(""); const [show,setShow]=useState(false);
-  const [err,setErr]=useState(""); const [token,setToken]=useState("");
+  const [err,setErr]=useState(""); const [token,setToken]=useState(""); const [loading,setLoading]=useState(false);
   const pwStr=pw.length===0?0:pw.length<6?1:pw.length<10?2:3;
   const pwC=["transparent",ERR,WARN,OK]; const pwL=["","Weak","Good","Strong"];
   function sendOTP(){
@@ -953,10 +958,12 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
       setDB(d=>({...d,customers:[...d.customers,{id:String(user.id),name:user.name,phone:user.phone,password:"",token:user.token||"",createdAt:new Date().toLocaleDateString("en-IN")}]}));
       setToken(user.token||"");
       setSession({role:"customer",userId:String(user.id),name:user.name});
-      try { const data = await api('/data'); setDB(d=>({...d,...data})); } catch {}
+      try {
+        setLoading(true); const data = await api('/data'); setDB(d=>({...d,...data})); } catch {}
       setStep(2);
       toast.success("Account created!");
-    } catch(e:any) { setErr(e.message||"Registration failed. Try again."); }
+      setLoading(false);
+    } catch(e:any) { setErr(e.message||"Registration failed. Try again."); setLoading(false); }
   }
   return (
     <div className="flex flex-col min-h-screen" style={{ background:BG }}>
@@ -1001,7 +1008,7 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
               </F>
               <F label="Confirm Password"><input type="password" value={conf} onChange={e=>setConf(e.target.value)} placeholder="Re-enter password" className={inp} style={{ ...iSt, borderColor:conf&&conf!==pw?ERR:BORD }}/></F>
               {err&&<p className="text-xs font-semibold" style={{ color:ERR }}>{err}</p>}
-              <button onClick={create} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Create Account</button>
+              <button onClick={create} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>{loading ? <><RefreshCw className="animate-spin mr-2"/>Creating...</> : "Create Account"}</button>
             </div>
           )}
           {step===2&&(
