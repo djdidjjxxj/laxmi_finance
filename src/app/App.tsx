@@ -228,7 +228,8 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 419) { csrfReady = null; }
-    if (res.status === 401 || res.status === 419) {
+    // Only trigger logout on 401 for real authenticated actions, not for the session check
+    if ((res.status === 401 || res.status === 419) && path !== '/auth/session' && path !== '/health') {
       if (globalTriggerLogout) globalTriggerLogout();
     }
     throw new Error(data.message || `Request failed: ${res.status}`);
@@ -2626,14 +2627,12 @@ export default function App() {
         if (user.role === 'admin') setScreen('admin-dashboard');
         else if (user.role === 'agent') setScreen('agent-dashboard');
         else setScreen('customer-home');
-      } else {
-        // If server says no session, log out locally
-        setSession({ role: null, userId: "", name: "" });
-        setScreen("splash");
-        setDB(INIT_DB);
-        localStorage.removeItem('lf_session');
       }
-    }).catch(() => {});
+      // If server says no session, DON'T log out — keep localStorage session alive.
+      // The user may just need to re-login the next time they try an authenticated action.
+    }).catch(() => {
+      // Server is waking up or offline — keep localStorage session. Don't log out.
+    });
 
     return () => {
       window.removeEventListener('visibilitychange', handleWakeup);

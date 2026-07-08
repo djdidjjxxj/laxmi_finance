@@ -611,12 +611,6 @@ class LoanController extends Controller
 
     public function health(): JsonResponse
     {
-        try {
-            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        } catch (\Exception $e) {
-            // Ignore
-        }
-
         return response()->json([
             'status' => 'ok',
             'timestamp' => now()->toIso8601String()
