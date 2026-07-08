@@ -287,6 +287,51 @@ async function apiUpload(dataUrl: string, filename: string): Promise<string> {
   return data.path;
 }
 
+// Helper to fetch and view PDF in a new window with correct auth
+async function openPdf(appId: string) {
+  try {
+    toast.loading("Generating PDF...", { id: "pdf-load" });
+    await ensureCsrf();
+    const xsrf = document.cookie
+      .split('; ')
+      .find(c => c.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
+    
+    const res = await fetch(`/api/loans/${appId}/pdf`, {
+      credentials: 'include',
+      headers: {
+        Accept: 'text/html',
+        ...(xsrf ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrf) } : {}),
+      }
+    });
+
+    if (!res.ok) {
+      toast.dismiss("pdf-load");
+      if (res.status === 401) {
+        toast.error("Session expired. Please log in again.");
+      } else {
+        toast.error(`Failed to load PDF (${res.status})`);
+      }
+      return;
+    }
+
+    const html = await res.text();
+    toast.dismiss("pdf-load");
+    
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      toast.error("Allow popups to view PDF");
+    }
+  } catch (e) {
+    toast.dismiss("pdf-load");
+    toast.error("Error loading PDF");
+    console.error(e);
+  }
+}
+
 // ─── Design tokens — yellow / white only ─────────────────────
 const Y    = "#FFD93D";   // lighter, softer yellow
 const Y2   = "#8B6914";   // dark amber — readable on white/yellow
@@ -345,18 +390,20 @@ function esc(s:string|number):string { return String(s).replace(/&/g,'&amp;').re
 // ─── Print application ────────────────────────────────────────
 function printApplication(app: LoanApp) {
   function openPrint(html: string) {
-    const blob = new Blob([html], { type: 'text/html' });
-    const blobUrl = URL.createObjectURL(blob);
-    const w = window.open(blobUrl, '_blank', 'width=860,height=680');
-    if (!w) toast.error("Allow popups to print");
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    const w = window.open('', '_blank', 'width=860,height=680');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      toast.error("Allow popups to print");
+    }
   }
   
   const photo = app.documents?.photo || app.customerPhoto;
   const aadhaarImg = app.documents?.aadhaar;
   const panImg = app.documents?.pan;
 
-  w.document.write(`<!DOCTYPE html><html><head><title>Loan Application - ${app.id}</title><style>
+  const html = `<!DOCTYPE html><html><head><title>Loan Application - ${app.id}</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;padding:32px;color:#111;font-size:13px;line-height:1.4}
     .hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:14px;border-bottom:3px solid #F5C518}
@@ -455,11 +502,13 @@ function printApplication(app: LoanApp) {
 
 function printLoanAgreement(app: LoanApp) {
   function openPrint(html: string) {
-    const blob = new Blob([html], { type: 'text/html' });
-    const blobUrl = URL.createObjectURL(blob);
-    const w = window.open(blobUrl, '_blank', 'width=860,height=900');
-    if (!w) toast.error("Allow popups to print");
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    const w = window.open('', '_blank', 'width=860,height=900');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      toast.error("Allow popups to print");
+    }
   }
   const today = new Date().toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric" });
   const html = `<!DOCTYPE html><html><head><title>Loan Agreement - ${app.id}</title><style>
@@ -1430,7 +1479,7 @@ function LoanStatusScreen({ navigate, session, db }:GP) {
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-xs" style={{ color:MUTED }}>Applied: {app.createdAt}</p>
-                {app.status==="approved"&&<button onClick={()=>window.open(`/api/loans/${app.id}/pdf`,'_blank')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold" style={{ background:YBG, color:Y2 }}><Download size={11}/> PDF</button>}
+                {app.status==="approved"&&<button onClick={()=>openPdf(app.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold" style={{ background:YBG, color:Y2 }}><Download size={11}/> PDF</button>}
               </div>
             </div>
           ))}
@@ -1557,7 +1606,7 @@ function ProfileScreen({ navigate, session, db }:GP) {
             {Icon:FileText,label:"My Documents",sub:"Aadhaar, PAN and KYC",fn:()=>toast.success("Your KYC documents are securely stored")},
             {Icon:Shield,label:"Security",sub:"Password & account",fn:()=>toast.success("Contact support to update your password")},
             {Icon:Bell,label:"Notifications",sub:"Alert preferences",nav:"notifications" as Screen},
-            {Icon:Download,label:"Download Statements",sub:"Loan PDF documents",fn:()=>{const apps=db.applications.filter(a=>a.customerId===session.userId&&a.status==="approved");if(apps.length>0)window.open(`/api/loans/${apps[apps.length-1].id}/pdf`,"_blank");else toast.success("No approved loans to download yet");}},
+            {Icon:Download,label:"Download Statements",sub:"Loan PDF documents",fn:()=>{const apps=db.applications.filter(a=>a.customerId===session.userId&&a.status==="approved");if(apps.length>0)openPdf(apps[apps.length-1].id);else toast.success("No approved loans to download yet");}},
             {Icon:MessageSquare,label:"Help & Support",sub:"FAQ and contact",nav:"help" as Screen},
           ] as {Icon:any;label:string;sub:string;fn?:()=>void;nav?:Screen}[]).map((item,i)=>(
             <button key={i} onClick={()=>item.nav?navigate(item.nav):item.fn?item.fn():undefined} className="w-full rounded-2xl p-4 flex items-center gap-4 text-left border" style={{ background:CARD, borderColor:BORD }}>
@@ -2046,9 +2095,13 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
                   <div key={key} onClick={() => {
                     if (!url) return;
                     const html = `<!DOCTYPE html><html><head><title>${docLabels[key] || key}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column}img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}p{color:#aaa;margin-top:12px;font-family:sans-serif;font-size:13px}</style></head><body><img src="${url}" /><p>${docLabels[key] || key}</p></body></html>`;
-                    const blob = new Blob([html], { type: 'text/html' });
-                    const blobUrl = URL.createObjectURL(blob);
-                    window.open(blobUrl, '_blank');
+                    const w = window.open('', '_blank');
+                    if (w) {
+                      w.document.write(html);
+                      w.document.close();
+                    } else {
+                      toast.error("Allow popups to view document");
+                    }
                   }} className="block rounded-2xl overflow-hidden border-2 hover:shadow-lg transition-shadow cursor-pointer animate-fadeIn" style={{ borderColor:BORD }}>
                     <div className="h-28 bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img src={url as string} alt={docLabels[key]||key} className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none';(e.target as HTMLImageElement).parentElement!.innerHTML=`<div class="flex flex-col items-center gap-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${MUTED}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg><span style="font-size:10px;color:${MUTED}">View File</span></div>`;}}/>
@@ -2155,10 +2208,13 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
     <div class="footer">Generated: ${new Date().toLocaleString("en-IN")} · Laxmi Finance Ltd. · Confidential</div>
     <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
     </body></html>`;
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, "_blank");
-    if(!w){toast.error("Allow popups");}
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(htmlContent);
+      w.document.close();
+    } else {
+      toast.error("Allow popups");
+    }
   }
 
   return (
