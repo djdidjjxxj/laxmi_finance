@@ -11,6 +11,7 @@ class AgentLog extends Model
         'loan_application_id',
         'application_number',
         'action',
+        'receipt_url',
     ];
 
     public function agent()

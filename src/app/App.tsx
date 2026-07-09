@@ -1786,7 +1786,27 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
   const [search,setSearch]=useState("");
   const [visited,setVisited]=useState<Record<string,boolean>>({});
   const [collected,setCollected]=useState<Record<string,boolean>>({});
+  const [collecting,setCollecting]=useState<Record<string,boolean>>({});
   const [deleting,setDeleting]=useState(false);
+
+  async function handleCollect(appId: string, file: File) {
+    if(collecting[appId]) return;
+    setCollecting(c=>({...c,[appId]:true}));
+    try {
+      const url = URL.createObjectURL(file);
+      const receiptPath = await apiUpload(url, `receipt-${appId}-${Date.now()}.jpg`);
+      await api('/agent/log', {
+        method: 'POST',
+        body: JSON.stringify({ application_number: appId, action: 'collected', receipt: receiptPath })
+      });
+      setCollected(c=>({...c,[appId]:true}));
+      setDB(d=>({...d,agentLogs:[...d.agentLogs,{agentId:session.userId,appId:appId,action:"collected",time:new Date().toLocaleString(),receipt:receiptPath}]}));
+      toast.success("EMI collected successfully!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to collect EMI");
+    }
+    setCollecting(c=>({...c,[appId]:false}));
+  }
 
   // Only approved loans assigned to this agent are shown
   const myAssignedApps = db.applications.filter(a => a.assignedAgent === session.name && a.status === "approved");
@@ -1942,8 +1962,14 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
                   </div>
                   <div className="flex items-center gap-3 sm:gap-4 pt-3 border-t flex-wrap" style={{ borderColor:BORD }}>
                     <div className="flex-1 min-w-0"><p className="text-[9px] font-semibold" style={{ color:MUTED }}>Daily EMI Due</p><p className="text-xl sm:text-2xl font-black" style={{ color:TEXT }}>{fmt(app.dailyEMI)}</p></div>
-                    {!collected[app.id]&&<button onClick={()=>{ api('/agent/log',{method:'POST',body:JSON.stringify({application_number:app.id,action:'collected'})}).then(()=>{ setCollected(c=>({...c,[app.id]:true})); setDB(d=>({...d,agentLogs:[...d.agentLogs,{agentId:session.userId,appId:app.id,action:"collected",time:new Date().toLocaleString()}]})); toast.success(`Collected ${fmt(app.dailyEMI)} from ${app.customerName}`); }).catch((e:any)=>toast.error(e.message)); }} className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-bold text-white active:opacity-85 whitespace-nowrap" style={{ background:OK }}>Collect EMI</button>}
-                    {collected[app.id]&&<button onClick={()=>toast.success("Receipt uploaded")} className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-bold flex items-center gap-1 whitespace-nowrap" style={{ background:YBG, color:Y2 }}><Upload size={11}/> Receipt</button>}
+                    {!collected[app.id]&&!collecting[app.id]&&(
+                      <label className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-bold text-white active:opacity-85 whitespace-nowrap cursor-pointer flex items-center gap-1.5" style={{ background:OK }}>
+                        <Upload size={14}/> Collect & Upload Receipt
+                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{if(e.target.files?.[0])handleCollect(app.id,e.target.files[0]);e.target.value='';}}/>
+                      </label>
+                    )}
+                    {collecting[app.id]&&<div className="px-4 py-2.5 rounded-2xl text-xs font-bold text-white flex items-center gap-2" style={{ background:"#6B7280" }}><RefreshCw className="animate-spin" size={14}/> Collecting...</div>}
+                    {collected[app.id]&&<button onClick={()=>toast.success("Receipt uploaded")} className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-bold flex items-center gap-1 whitespace-nowrap" style={{ background:YBG, color:Y2 }}><Check size={11}/> Uploaded</button>}
                   </div>
                 </div>
               ))}
@@ -2001,10 +2027,10 @@ function AdminLoginScreen({ navigate, setSession, setDB }:GP) {
 }
 
 // ─── ADMIN: Full Application Detail Modal ─────────────────────
-function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssign, onCancel, onDelete }:{
+function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssign, onCancel, onDelete, approving }:{
   app:LoanApp; agents:AgentUser[]; db:DB;
   onClose:()=>void; onApprove:()=>void; onReject:()=>void; onAssign:(a:string)=>void;
-  onCancel?:()=>void; onDelete?:()=>void;
+  onCancel?:()=>void; onDelete?:()=>void; approving?:boolean;
 }) {
   const logs = db.agentLogs.filter(l=>l.appId===app.id);
   const [selectedAgent,setSelectedAgent] = useState(app.assignedAgent||"");
@@ -2031,8 +2057,10 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
           <div className="flex gap-2">
             {app.status==="pending"&&(
               <>
-                <button onClick={onApprove} className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85" style={{ background:OK }}>✓ Approve</button>
-                <button onClick={onReject}  className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85" style={{ background:ERR }}>✕ Reject</button>
+                <button onClick={onApprove} disabled={approving} className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85 flex items-center gap-1.5" style={{ background:OK, opacity:approving?0.7:1 }}>
+                  {approving ? <><RefreshCw size={12} className="animate-spin"/> Approving...</> : <>✓ Approve</>}
+                </button>
+                <button onClick={onReject} disabled={approving} className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85" style={{ background:ERR, opacity:approving?0.7:1 }}>✕ Reject</button>
               </>
             )}
             {app.status==="approved"&&onCancel&&(
@@ -2152,6 +2180,11 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
                       {l.action==="collected"?<Check size={14} color="white"/>:<Users size={14} color={TEXT}/>}
                     </div>
                     <div className="flex-1"><p className="text-xs font-bold" style={{ color:TEXT }}>{l.action==="visited"?"Visit Completed":"EMI Collected"}</p><p className="text-[10px]" style={{ color:MUTED }}>{l.time}</p></div>
+                    {l.receipt && (
+                      <a href={l.receipt} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0" style={{ background:CARD, color:TEXT, border:`1px solid ${BORD}` }}>
+                        <Search size={10}/> Receipt
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2168,6 +2201,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
   const [tab,setTab]=useState<"overview"|"applications"|"customers"|"agents"|"dues">("overview");
   const [search,setSearch]=useState("");
   const [viewApp,setViewApp]=useState<LoanApp|null>(null);
+  const [approving,setApproving]=useState(false);
   const [dues,setDues]=useState<{id:string;customerName:string;customerPhone:string;dailyEMI:number;dueCount:number;dueAmount:number;assignedAgent:string}[]>([]);
   const apps=db.applications; const custs=db.customers;
   const pending=apps.filter(a=>a.status==="pending");
@@ -2175,10 +2209,17 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
   const rejected=apps.filter(a=>a.status==="rejected");
   const cancelled=apps.filter(a=>a.status==="cancelled");
   const filtered=apps.filter(a=>!search||a.customerName.toLowerCase().includes(search.toLowerCase())||a.id.includes(search));
-  function approve(id:string){ api(`/loans/${id}/status`,{method:'PUT',body:JSON.stringify({status:'approved'})}).then(({loan,customer_token})=>{ setDB(d=>({...d,applications:d.applications.map(a=>a.id===id?loan:a),customers:customer_token?d.customers.map(c=>c.id===loan.customerId?{...c,token:customer_token}:c):d.customers})); setViewApp(null); toast.success("Loan approved!"); }).catch((e:any)=>toast.error(e.message)); }
+  
+  function approve(id:string){ 
+    setApproving(true);
+    api(`/loans/${id}/status`,{method:'PUT',body:JSON.stringify({status:'approved'})})
+      .then(({loan,customer_token})=>{ setDB(d=>({...d,applications:d.applications.map(a=>a.id===id?loan:a),customers:customer_token?d.customers.map(c=>c.id===loan.customerId?{...c,token:customer_token}:c):d.customers})); setViewApp(null); toast.success("Loan approved!"); setApproving(false); })
+      .catch((e:any)=>{ toast.error(e.message); setApproving(false); }); 
+  }
   function reject(id:string){ api(`/loans/${id}/status`,{method:'PUT',body:JSON.stringify({status:'rejected'})}).then(({loan})=>{ setDB(d=>({...d,applications:d.applications.map(a=>a.id===id?loan:a)})); setViewApp(null); toast.error("Application rejected"); }).catch((e:any)=>toast.error(e.message)); }
   function cancel(id:string){ if(!confirm("Cancel this approved loan?")) return; api(`/loans/${id}/status`,{method:'PUT',body:JSON.stringify({status:'cancelled'})}).then(({loan})=>{ setDB(d=>({...d,applications:d.applications.map(a=>a.id===id?loan:a)})); setViewApp(null); toast.success("Loan cancelled"); }).catch((e:any)=>toast.error(e.message)); }
   function deleteLoan(id:string){ if(!confirm("Permanently delete this application? This cannot be undone.")) return; api(`/loans/${id}`,{method:'DELETE'}).then(()=>{ setDB(d=>({...d,applications:d.applications.filter(a=>a.id!==id)})); setViewApp(null); toast.success("Application deleted"); }).catch((e:any)=>toast.error(e.message)); }
+  function clearAllLogs(){ if(!confirm("Clear all agent activity and collection logs?")) return; api(`/admin/logs`,{method:'DELETE'}).then(()=>{ setDB(d=>({...d,agentLogs:[]})); toast.success("All logs cleared!"); }).catch((e:any)=>toast.error(e.message)); }
   function assignAgent(id:string,agentName:string){ api(`/loans/${id}/assign`,{method:'PUT',body:JSON.stringify({agent_name:agentName})}).then(({loan})=>{ setDB(d=>({...d,applications:d.applications.map(a=>a.id===id?loan:a)})); setViewApp(loan); }).catch((e:any)=>toast.error(e.message)); }
   function loadDues(){ api('/emi-dues').then(d=>setDues(d.dues||[])).catch(()=>{}); }
   useEffect(()=>{ if(tab==="dues") loadDues(); },[tab]);

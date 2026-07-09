@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/db/tables/{table}', [LoanController::class, 'getDbTableData']);
     Route::put('/admin/db/tables/{table}/row', [LoanController::class, 'updateDbRow']);
     Route::delete('/admin/db/tables/{table}/row/{id}', [LoanController::class, 'deleteDbRow']);
+    Route::delete('/admin/logs', [LoanController::class, 'clearLogs']);
 
     Route::post('/agent/log', [LoanController::class, 'logActivity']);
 

@@ -236,6 +236,7 @@ class LoanController extends Controller
         $request->validate([
             'application_number' => ['required', 'string'],
             'action' => ['required', 'in:visited,collected'],
+            'receipt' => ['nullable', 'string']
         ]);
 
         $user = $request->user();
@@ -246,6 +247,7 @@ class LoanController extends Controller
             'loan_application_id' => $loan->id,
             'application_number' => $request->application_number,
             'action' => $request->action,
+            'receipt_url' => $request->receipt
         ]);
 
         return response()->json(['success' => true]);
@@ -276,6 +278,18 @@ class LoanController extends Controller
         $loan->delete();
 
         return response()->json(['message' => 'Application deleted successfully']);
+    }
+
+    public function clearLogs(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        AgentLog::truncate();
+
+        return response()->json(['message' => 'All logs cleared successfully']);
     }
 
     public function emiDues(Request $request): JsonResponse
@@ -420,6 +434,7 @@ class LoanController extends Controller
             'appId' => $l->application_number,
             'action' => $l->action,
             'time' => $l->created_at->toDateTimeString(),
+            'receipt' => $l->receipt_url ?? '',
         ];
     }
 
