@@ -403,6 +403,18 @@ class LoanController extends Controller
 
     private function formatApp(LoanApplication $a): array
     {
+        static $adminSignatureUrl = null;
+        if ($adminSignatureUrl === null) {
+            $admin = User::where('role', 'admin')->first();
+            if ($admin && $admin->customerProfile) {
+                $meta = $admin->customerProfile->metadata;
+                if (is_string($meta)) $meta = json_decode($meta, true);
+                $sig = $meta['admin_signature'] ?? null;
+                $adminSignatureUrl = $sig ? (str_starts_with($sig, '/storage/') ? url($sig) : $sig) : '';
+            } else {
+                $adminSignatureUrl = '';
+            }
+        }
         return [
             'id' => $a->application_number,
             'customerId' => (string) $a->customer_id,
@@ -419,6 +431,7 @@ class LoanController extends Controller
             'purpose' => $a->purpose ?? '',
             'city' => $a->city ?? '',
             'createdAt' => $a->created_at->format('j/n/Y'),
+            'updatedAt' => $a->updated_at?->toISOString() ?? '',
             'address' => $a->address ?? '',
             'income' => (int) ($a->monthly_income ?? 0),
             'coBorrowerName' => $a->co_borrower['name'] ?? '',
@@ -429,6 +442,7 @@ class LoanController extends Controller
             'customerPhoto' => $a->customer?->customerProfile?->photo ?? '',
             'aadhaar' => $a->aadhaar ?? '',
             'pan' => $a->pan ?? '',
+            'adminSignatureUrl' => $adminSignatureUrl,
         ];
     }
 
