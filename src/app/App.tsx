@@ -1241,7 +1241,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
     if(step===0){ const pin=parseInt(form.pinCode); return form.name&&form.phone.length===10&&form.aadhaar.length===12&&form.pan.length===10&&form.dob&&form.city&&form.address&&form.pinCode.length===6&&pin>=700108&&pin<=700131&&form.income; }
     if(step===1) return form.coName&&form.coPhone.length===10&&form.coAddress;
     if(step===2) return safeAmt>=1000&&form.purpose;
-    if(step===3) return !!(files.aadhaar&&files.pan&&files.photo&&files.signature);
+    if(step===3) return !!(files.aadhaar&&files.pan&&files.photo&&files.signature&&files.coSignature);
     if(step===5) return form.declared;
     return true;
   }
@@ -1387,6 +1387,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
             <DocUpload label="PAN Card" tag="Mandatory" fieldKey="pan" files={files} setFiles={setFiles} allowCamera cameraLabel="Capture PAN Card"/>
             <DocUpload label="Live Applicant Photograph" tag="Mandatory" fieldKey="photo" files={files} setFiles={setFiles} allowCamera cameraLabel="Take Applicant Photo"/>
             <DocUpload label="Applicant Signature" tag="Mandatory" fieldKey="signature" files={files} setFiles={setFiles} allowCamera cameraLabel="Capture Signature"/>
+            <DocUpload label="Co-Borrower Signature" tag="Mandatory" fieldKey="coSignature" files={files} setFiles={setFiles} allowCamera cameraLabel="Capture Co-Borrower Signature"/>
           </>)}
           {step===4&&(<>
             <div className="rounded-2xl p-4 border-2" style={{ borderColor:Y, background:YBG }}>
@@ -1406,7 +1407,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               { t:"Personal",    rows:[["Name",form.name||session.name],["Mobile",form.phone||"—"],["Aadhaar Number",form.aadhaar||"—"],["PAN Number",form.pan||"—"],["City",form.city||"—"],["PIN Code",form.pinCode||"—"],["Income",form.income?fmt(parseInt(form.income)):"—"],["Address",form.address||"—"]] },
               { t:"Co-Borrower", rows:[["Name",form.coName||"—"],["Mobile",form.coPhone||"—"],["Relation",form.coRelation],["Address",form.coAddress||"—"]] },
               { t:"Loan",        rows:[["Type",`${form.loanType} Loan`],["Amount",fmt(safeAmt)],["Plan",`${form.tenure} days daily`],["Daily EMI",selEMI?fmt(selEMI.daily):"—"],["Total",selEMI?fmt(selEMI.total):"—"],["Purpose",form.purpose||"—"]] },
-              { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"✓ Uploaded":"Pending"],["PAN Card",files.pan?"✓ Uploaded":"Pending"],["Photo",files.photo?"✓ Captured":"Pending"],["Signature",files.signature?"✓ Captured":"Pending"]] },
+              { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"✓ Uploaded":"Pending"],["PAN Card",files.pan?"✓ Uploaded":"Pending"],["Photo",files.photo?"✓ Captured":"Pending"],["Signature",files.signature?"✓ Captured":"Pending"],["Co-Borrower Sig",files.coSignature?"✓ Captured":"Pending"]] },
             ].map(s=>(
               <div key={s.t} className="rounded-2xl p-4 border-2" style={{ borderColor:BORD }}>
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>{s.t}</p>
@@ -2042,7 +2043,7 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
   const logs = db.agentLogs.filter(l=>l.appId===app.id);
   const [selectedAgent,setSelectedAgent] = useState(app.assignedAgent||"");
   const docs = app.documents||{};
-  const docLabels: Record<string,string> = { photo:"Applicant Photo", signature:"Applicant Signature", aadhaar:"Aadhaar Card", pan:"PAN Card", shopPhoto:"Shop / Business Photo", biz:"Business Proof", coPhoto:"Co-Borrower Photo", other:"Other Document" };
+  const docLabels: Record<string,string> = { photo:"Applicant Photo", signature:"Applicant Signature", coSignature:"Co-Borrower Signature", aadhaar:"Aadhaar Card", pan:"PAN Card", shopPhoto:"Shop / Business Photo", biz:"Business Proof", coPhoto:"Co-Borrower Photo", other:"Other Document" };
   const photoUrl = docs.photo || app.customerPhoto || "";
 
   return (
@@ -2209,6 +2210,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
   const [search,setSearch]=useState("");
   const [viewApp,setViewApp]=useState<LoanApp|null>(null);
   const [approving,setApproving]=useState(false);
+  const [adminSigInput,setAdminSigInput]=useState<HTMLInputElement|null>(null);
   const [dues,setDues]=useState<{id:string;customerName:string;customerPhone:string;dailyEMI:number;dueCount:number;dueAmount:number;assignedAgent:string}[]>([]);
   const apps=db.applications; const custs=db.customers;
   const pending=apps.filter(a=>a.status==="pending");
@@ -2237,6 +2239,21 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=`laxmi-finance-applications-${new Date().toISOString().split("T")[0]}.csv`; a.click();
     URL.revokeObjectURL(url); toast.success("CSV exported!");
+  }
+  async function uploadAdminSignature(e:React.ChangeEvent<HTMLInputElement>){
+    const file = e.target.files?.[0];
+    if(!file) return;
+    try {
+      toast.loading("Uploading signature...");
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const path = await apiUpload(ev.target?.result as string, `admin-sig-${Date.now()}.jpg`);
+        await api('/admin/signature', { method: 'POST', body: JSON.stringify({ signature: path }) });
+        toast.dismiss();
+        toast.success("Admin signature updated!");
+      };
+      reader.readAsDataURL(file);
+    } catch(err:any){ toast.dismiss(); toast.error(err.message||"Upload failed"); }
   }
   function exportPDFReport(){
     const today=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
@@ -2332,14 +2349,15 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
                 <div key={k} className="flex justify-between py-2.5 border-b last:border-0" style={{ borderColor:BORD }}><span className="text-sm" style={{ color:MUTED }}>{k}</span><span className="text-sm font-bold" style={{ color:TEXT }}>{v}</span></div>
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[{l:"Export CSV",fn:exportCSV},{l:"PDF Report",fn:exportPDFReport},{l:"Agreement",fn:()=>{const a=approved[0]; if(a) printLoanAgreement(a); else toast.error("No approved loans");}}].map(a=>(
-                <button key={a.l} onClick={a.fn} className="p-3 sm:p-4 rounded-2xl border-2 text-center active:opacity-85 min-w-0" style={{ borderColor:Y, background:YBG }}>
-                  <Download size={18} color={Y2} className="mx-auto mb-1.5"/>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              {[{l:"Export CSV",icon:Download,fn:exportCSV},{l:"PDF Report",icon:FileText,fn:exportPDFReport},{l:"Agreement",icon:FileText,fn:()=>{const a=approved[0]; if(a) printLoanAgreement(a); else toast.error("No approved loans");}},{l:"Upload Signature",icon:Upload,fn:()=>adminSigInput?.click()}].map((a, i)=>(
+                <button key={i} onClick={a.fn} className="p-3 sm:p-4 rounded-2xl border-2 text-center active:opacity-85 min-w-0" style={{ borderColor:Y, background:YBG }}>
+                  <a.icon size={18} color={Y2} className="mx-auto mb-1.5"/>
                   <span className="text-[9px] sm:text-[10px] font-bold truncate block" style={{ color:TEXT }}>{a.l}</span>
                 </button>
               ))}
             </div>
+            <input type="file" ref={setAdminSigInput} accept="image/*" className="hidden" onChange={uploadAdminSignature} />
           </>)}
 
           {tab==="applications"&&(

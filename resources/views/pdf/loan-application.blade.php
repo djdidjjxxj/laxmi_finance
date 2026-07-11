@@ -63,6 +63,10 @@ h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   if (str_starts_with($signatureUrl, '/storage/')) {
       $signatureUrl = url($signatureUrl);
   }
+  $coSignatureUrl = $docs['coSignature'] ?? '';
+  if (str_starts_with($coSignatureUrl, '/storage/')) {
+      $coSignatureUrl = url($coSignatureUrl);
+  }
 @endphp
 
 <h3>Applicant Details</h3>
@@ -124,9 +128,30 @@ h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
     @endif
     <div class="sig">Applicant Signature</div>
   </div>
-  <div><div style="height:58px"></div><div class="sig">Co-Borrower Signature</div></div>
-  <div><div style="height:58px"></div><div class="sig">Authorised Signatory — Laxmi Finance</div></div>
-  <div><div style="height:58px"></div><div class="sig">Date</div></div>
+  <div>
+    @if($coSignatureUrl)
+      <img src="{{ $coSignatureUrl }}" style="height:50px;object-fit:contain;margin-bottom:8px;display:block;max-width:100%" />
+    @else
+      <div style="height:58px"></div>
+    @endif
+    <div class="sig">Co-Borrower Signature</div>
+  </div>
+  <div>
+    @if(isset($adminSignatureUrl) && $adminSignatureUrl && $loan->status === 'approved')
+      <img src="{{ $adminSignatureUrl }}" style="height:50px;object-fit:contain;margin-bottom:8px;display:block;max-width:100%" />
+    @else
+      <div style="height:58px"></div>
+    @endif
+    <div class="sig">Authorised Signatory — Laxmi Finance</div>
+  </div>
+  <div>
+    <div style="height:58px;display:flex;align-items:end;padding-bottom:12px;font-size:12px;color:#111">
+      @if($loan->status === 'approved')
+        {{ \Carbon\Carbon::parse($loan->updated_at)->format('d M Y') }}
+      @endif
+    </div>
+    <div class="sig">Date</div>
+  </div>
 </div>
 
 <div class="footer">

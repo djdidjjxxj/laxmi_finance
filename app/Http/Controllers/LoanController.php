@@ -370,7 +370,35 @@ class LoanController extends Controller
             abort(403, 'You are not authorized to view this document.');
         }
 
-        return view('pdf.loan-application', ['loan' => $loan]);
+        $admin = User::where('role', 'admin')->first();
+        $adminSignatureUrl = null;
+        if ($admin && $admin->customerProfile) {
+            $meta = $admin->customerProfile->metadata;
+            if (is_string($meta)) $meta = json_decode($meta, true);
+            $adminSignatureUrl = $meta['admin_signature'] ?? null;
+        }
+
+        return view('pdf.loan-application', [
+            'loan' => $loan,
+            'adminSignatureUrl' => $adminSignatureUrl
+        ]);
+    }
+
+    public function saveAdminSignature(Request $request): JsonResponse
+    {
+        $request->validate(['signature' => 'required|string']);
+        $user = $request->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $profile = CustomerProfile::firstOrCreate(['user_id' => $user->id]);
+        $meta = $profile->metadata ?? [];
+        if (is_string($meta)) $meta = json_decode($meta, true);
+        $meta['admin_signature'] = $request->signature;
+        $profile->update(['metadata' => $meta]);
+
+        return response()->json(['success' => true]);
     }
 
     private function formatApp(LoanApplication $a): array

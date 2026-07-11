@@ -33,6 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/agent/log', [LoanController::class, 'logActivity']);
 
+    Route::post('/admin/signature', [LoanController::class, 'saveAdminSignature']);
+
     Route::post('/uploads', [LoanController::class, 'upload']);
 });
 
