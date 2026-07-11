@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast, Toaster } from "sonner";
 import {
   ChevronLeft, ChevronRight, Eye, EyeOff, Camera,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
-// â”€â”€â”€ API helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── API helper ──────────────────────────────────────────────
 let csrfReady: Promise<void> | null = null;
 function ensureCsrf() {
   if (!csrfReady) csrfReady = fetch('/sanctum/csrf-cookie', { credentials: 'include' }).then(() => {});
@@ -228,7 +228,7 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 419) {
-      // CSRF expired â€” refresh token and retry once
+      // CSRF expired — refresh token and retry once
       csrfReady = null;
       await ensureCsrf();
       // Retry the request once with fresh CSRF
@@ -254,7 +254,7 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
       return data2;
     }
     // On 401: redirect to login with friendly message (don't wipe data)
-    if (res.status === 401 && path !== '/auth/session' && path !== '/health') {
+    if (res.status === 401 && path !== '/auth/session' && path !== '/health' && path !== '/data') {
       toast.error('Session expired. Please log in again.');
       if (globalTriggerLogout) globalTriggerLogout();
     }
@@ -263,7 +263,7 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
   return data;
 }
 
-// â”€â”€â”€ File upload helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── File upload helper ──────────────────────────────────────
 async function apiUpload(dataUrl: string, filename: string): Promise<string> {
   await ensureCsrf();
   const xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.split('=')[1];
@@ -327,9 +327,9 @@ async function openPdf(appId: string) {
   }
 }
 
-// â”€â”€â”€ Design tokens â€” yellow / white only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Design tokens — yellow / white only ─────────────────────
 const Y    = "#FFD93D";   // lighter, softer yellow
-const Y2   = "#8B6914";   // dark amber â€” readable on white/yellow
+const Y2   = "#8B6914";   // dark amber — readable on white/yellow
 const YBG  = "#FFFBEB";   // very light tint
 const BG   = "#F2F2F7";
 const CARD = "#FFFFFF";
@@ -346,16 +346,16 @@ const PINK   = "#DB2777";
 const TEAL   = "#0D9488";
 const AMBER  = "#D97706";
 
-// â”€â”€â”€ EMI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── EMI ─────────────────────────────────────────────────────
 const MAX_AMT = 20000;
 function calcEMI(p: number, t: 33 | 66) {
   const daily = t === 33 ? Math.round(p * 0.04) : Math.round(p * 0.02);
   const total = daily * t;
   return { daily, total };
 }
-const fmt = (n: number) => `â‚¹${n.toLocaleString("en-IN")}`;
+const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ────────────────────────────────────────────────────
 type Screen =
   | "splash" | "login" | "register" | "customer-home"
   | "loan-apply" | "emi" | "notifications" | "profile"
@@ -379,17 +379,22 @@ type UserRole = "customer"|"agent"|"admin"|null;
 interface Session { role:UserRole; userId:string; name:string; }
 interface GP { navigate:(s:Screen)=>void; session:Session; setSession:(s:Session)=>void; db:DB; setDB:React.Dispatch<React.SetStateAction<DB>>; }
 
-// â”€â”€â”€ HTML escaper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── HTML escaper ────────────────────────────────────────────
 function esc(s:string|number):string { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// â”€â”€â”€ Print application â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Print application ────────────────────────────────────────
 function printApplication(app: LoanApp) {
-  const toAbsUrl = (p?: string|null) => !p ? '' : p.startsWith('http') ? p : (window.location.origin + (p.startsWith('/') ? p : '/storage/' + p));
   function openPrint(html: string) {
     const w = window.open('', '_blank', 'width=860,height=680');
-    if (w) { w.document.write(html); w.document.close(); }
-    else { toast.error('Allow popups to print'); }
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      toast.error("Allow popups to print");
+    }
   }
+  
+  const toAbsUrl = (p?: string|null) => !p ? '' : p.startsWith('http') ? p : (window.location.origin + (p.startsWith('/') ? p : '/storage/' + p));
   const photo = toAbsUrl(app.documents?.photo || app.customerPhoto);
   const aadhaarImg = toAbsUrl(app.documents?.aadhaar);
   const panImg = toAbsUrl(app.documents?.pan);
@@ -424,16 +429,16 @@ function printApplication(app: LoanApp) {
       .page-break{page-break-before:always}
     }
   </style></head><body>
-  <div class="hdr"><div class="logo">ðŸ› Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
+  <div class="hdr"><div class="logo">🏛 Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
   
   <h3>Loan Details</h3>
   <div class="grid">
     <div class="row"><span class="lbl">Loan Type</span><span class="val">${app.loanType} Loan</span></div>
-    <div class="row"><span class="lbl">Applied Amount</span><span class="val">â‚¹${app.amount.toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Applied Amount</span><span class="val">₹${app.amount.toLocaleString("en-IN")}</span></div>
     <div class="row"><span class="lbl">Tenure</span><span class="val">${app.tenure} Days (Daily EMI)</span></div>
-    <div class="row"><span class="lbl">Daily EMI</span><span class="val">â‚¹${app.dailyEMI.toLocaleString("en-IN")}</span></div>
-    <div class="row"><span class="lbl">Total Payable</span><span class="val">â‚¹${app.totalPayable.toLocaleString("en-IN")}</span></div>
-    <div class="row"><span class="lbl">Interest</span><span class="val">â‚¹${(app.totalPayable-app.amount).toLocaleString("en-IN")} (â‚¹${Math.round(app.amount*0.04)}/day Ã— ${app.tenure} days)</span></div>
+    <div class="row"><span class="lbl">Daily EMI</span><span class="val">₹${app.dailyEMI.toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Total Payable</span><span class="val">₹${app.totalPayable.toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Interest</span><span class="val">₹${(app.totalPayable-app.amount).toLocaleString("en-IN")} (₹${Math.round(app.amount*0.04)}/day × ${app.tenure} days)</span></div>
     <div class="row full"><span class="lbl">Purpose</span><span class="val">${esc(app.purpose)}</span></div>
     <div class="row"><span class="lbl">Applied On</span><span class="val">${esc(app.createdAt)}</span></div>
     <div class="row"><span class="lbl">Assigned Agent</span><span class="val">${esc(app.assignedAgent||"Unassigned")}</span></div>
@@ -445,10 +450,10 @@ function printApplication(app: LoanApp) {
       <div class="grid">
         <div class="row"><span class="lbl">Full Name</span><span class="val">${esc(app.customerName)}</span></div>
         <div class="row"><span class="lbl">Mobile</span><span class="val">+91 ${esc(app.customerPhone)}</span></div>
-        <div class="row"><span class="lbl">Aadhaar Number</span><span class="val">${esc(app.aadhaar || "â€”")}</span></div>
-        <div class="row"><span class="lbl">PAN Number</span><span class="val">${esc(app.pan || "â€”")}</span></div>
+        <div class="row"><span class="lbl">Aadhaar Number</span><span class="val">${esc(app.aadhaar || "—")}</span></div>
+        <div class="row"><span class="lbl">PAN Number</span><span class="val">${esc(app.pan || "—")}</span></div>
         <div class="row"><span class="lbl">City</span><span class="val">${esc(app.city)}</span></div>
-        <div class="row"><span class="lbl">Monthly Income</span><span class="val">â‚¹${(app.income||0).toLocaleString("en-IN")}</span></div>
+        <div class="row"><span class="lbl">Monthly Income</span><span class="val">₹${(app.income||0).toLocaleString("en-IN")}</span></div>
         <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.address)}</span></div>
       </div>
     </div>
@@ -457,10 +462,10 @@ function printApplication(app: LoanApp) {
 
   <h3>Co-Borrower Details</h3>
   <div class="grid">
-    <div class="row"><span class="lbl">Full Name</span><span class="val">${esc(app.coBorrowerName||"â€”")}</span></div>
-    <div class="row"><span class="lbl">Mobile</span><span class="val">+91 ${esc(app.coBorrowerPhone||"â€”")}</span></div>
-    <div class="row"><span class="lbl">Relationship</span><span class="val">${esc(app.coBorrowerRelation||"â€”")}</span></div>
-    <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.coBorrowerAddress||"â€”")}</span></div>
+    <div class="row"><span class="lbl">Full Name</span><span class="val">${esc(app.coBorrowerName||"—")}</span></div>
+    <div class="row"><span class="lbl">Mobile</span><span class="val">+91 ${esc(app.coBorrowerPhone||"—")}</span></div>
+    <div class="row"><span class="lbl">Relationship</span><span class="val">${esc(app.coBorrowerRelation||"—")}</span></div>
+    <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.coBorrowerAddress||"—")}</span></div>
   </div>
 
   <div class="sig-row" style="align-items:end;grid-template-columns:1fr 1fr 1fr 1fr">
@@ -474,7 +479,7 @@ function printApplication(app: LoanApp) {
     </div>
     <div>
       ${isApproved && adminSignatureImg ? `<img src="${adminSignatureImg}" style="height:50px;object-fit:contain;margin-bottom:8px;display:block;max-width:100%" />` : `<div style="height:58px"></div>`}
-      <div class="sig">Authorised Signatory â€” Laxmi Finance</div>
+      <div class="sig">Authorised Signatory — Laxmi Finance</div>
     </div>
     <div>
       ${isApproved && approvalDate ? `<div style="height:44px;display:flex;align-items:flex-end;padding-bottom:4px;font-size:12px;font-weight:600;color:#111">${new Date(approvalDate).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>` : `<div style="height:58px"></div>`}
@@ -482,11 +487,11 @@ function printApplication(app: LoanApp) {
     </div>
   </div>
   
-  <div class="footer">Laxmi Finance Ltd. Â· RBI Licensed NBFC Â· Generated: ${new Date().toLocaleString("en-IN")}</div>
+  <div class="footer">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
 
   ${(aadhaarImg || panImg) ? `
     <div class="page-break"></div>
-    <div class="hdr"><div class="logo">ðŸ› Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
+    <div class="hdr"><div class="logo">🏛 Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
     <h3>Uploaded KYC Documents</h3>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px;">
       ${aadhaarImg ? `
@@ -502,7 +507,7 @@ function printApplication(app: LoanApp) {
         </div>
       ` : ''}
     </div>
-    <div class="footer" style="margin-top: 64px;">Laxmi Finance Ltd. Â· RBI Licensed NBFC Â· Generated: ${new Date().toLocaleString("en-IN")}</div>
+    <div class="footer" style="margin-top: 64px;">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
   ` : ''}
 
   <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
@@ -541,30 +546,30 @@ function printLoanAgreement(app: LoanApp) {
     @media print{body{padding:24px}}
   </style></head><body>
   <div class="hdr">
-    <div class="logo">ðŸ› Laxmi Finance Ltd.</div>
+    <div class="logo">🏛 Laxmi Finance Ltd.</div>
     <div class="title">Loan Agreement</div>
-    <div class="ref">Agreement No: ${app.id} Â· Date: ${today}</div>
+    <div class="ref">Agreement No: ${app.id} · Date: ${today}</div>
   </div>
   <p>This Loan Agreement ("Agreement") is entered into on <strong>${today}</strong> between:</p>
   <p><strong>Lender:</strong> Laxmi Finance Ltd., a licensed NBFC ("Company")</p>
-  <p><strong>Borrower:</strong> ${app.customerName}, Mobile: +91 ${app.customerPhone}, Address: ${app.address || "â€”"} ("Borrower")</p>
-  <p><strong>Co-Borrower:</strong> ${app.coBorrowerName || "â€”"}, Mobile: +91 ${app.coBorrowerPhone || "â€”"}, Relationship: ${app.coBorrowerRelation || "â€”"} ("Co-Borrower")</p>
+  <p><strong>Borrower:</strong> ${app.customerName}, Mobile: +91 ${app.customerPhone}, Address: ${app.address || "—"} ("Borrower")</p>
+  <p><strong>Co-Borrower:</strong> ${app.coBorrowerName || "—"}, Mobile: +91 ${app.coBorrowerPhone || "—"}, Relationship: ${app.coBorrowerRelation || "—"} ("Co-Borrower")</p>
 
   <h3>Loan Details</h3>
   <div class="grid">
     <div class="row"><span class="lbl">Loan Type</span><span class="val">${app.loanType} Loan</span></div>
-    <div class="row"><span class="lbl">Principal Amount</span><span class="val">â‚¹${app.amount.toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Principal Amount</span><span class="val">₹${app.amount.toLocaleString("en-IN")}</span></div>
     <div class="row"><span class="lbl">Tenure</span><span class="val">${app.tenure} Days (Daily EMI)</span></div>
-    <div class="row"><span class="lbl">Daily EMI</span><span class="val">â‚¹${app.dailyEMI.toLocaleString("en-IN")}</span></div>
-    <div class="row"><span class="lbl">Total Payable</span><span class="val">â‚¹${app.totalPayable.toLocaleString("en-IN")}</span></div>
-    <div class="row"><span class="lbl">Interest</span><span class="val">â‚¹${(app.totalPayable - app.amount).toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Daily EMI</span><span class="val">₹${app.dailyEMI.toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Total Payable</span><span class="val">₹${app.totalPayable.toLocaleString("en-IN")}</span></div>
+    <div class="row"><span class="lbl">Interest</span><span class="val">₹${(app.totalPayable - app.amount).toLocaleString("en-IN")}</span></div>
   </div>
 
   <h3>Terms and Conditions</h3>
   <div class="terms"><ol>
-    <li>The Borrower agrees to repay the loan in daily installments of <strong>â‚¹${app.dailyEMI.toLocaleString("en-IN")}</strong> for <strong>${app.tenure} consecutive days</strong> starting from the date of disbursement.</li>
+    <li>The Borrower agrees to repay the loan in daily installments of <strong>₹${app.dailyEMI.toLocaleString("en-IN")}</strong> for <strong>${app.tenure} consecutive days</strong> starting from the date of disbursement.</li>
     <li>The Co-Borrower is equally liable for repayment of the entire loan amount including interest.</li>
-    <li>A late fee of â‚¹10 per day will be charged for each missed EMI payment.</li>
+    <li>A late fee of ₹10 per day will be charged for each missed EMI payment.</li>
     <li>The Borrower may prepay the loan at any time without penalty.</li>
     <li>In case of default exceeding 7 consecutive days, the Company reserves the right to initiate recovery proceedings.</li>
     <li>The loan amount will be disbursed to the Borrower within 48 hours of agreement execution.</li>
@@ -576,21 +581,21 @@ function printLoanAgreement(app: LoanApp) {
 
   <div class="sig-row">
     <div class="sig">Borrower Signature<br/><br/>${app.customerName}</div>
-    <div class="sig">Co-Borrower Signature<br/><br/>${app.coBorrowerName || "â€”"}</div>
+    <div class="sig">Co-Borrower Signature<br/><br/>${app.coBorrowerName || "—"}</div>
   </div>
   <div class="sig-row" style="margin-top:28px">
     <div class="sig">Authorised Signatory<br/>Laxmi Finance Ltd.</div>
-    <div class="sig">Field Agent: ${app.assignedAgent || "â€”"}<br/>Date: ${today}</div>
+    <div class="sig">Field Agent: ${app.assignedAgent || "—"}<br/>Date: ${today}</div>
   </div>
 
-  <div class="stamp">LAXMI FINANCE LTD. Â· OFFICIAL LOAN AGREEMENT Â· ${app.id}</div>
-  <div class="footer">This is a computer-generated document. Â· Laxmi Finance Ltd. Â· RBI Licensed NBFC Â· Generated: ${new Date().toLocaleString("en-IN")}</div>
+  <div class="stamp">LAXMI FINANCE LTD. · OFFICIAL LOAN AGREEMENT · ${app.id}</div>
+  <div class="footer">This is a computer-generated document. · Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
   <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
   </body></html>`;
   openPrint(html);
 }
 
-// â”€â”€â”€ Shared UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared UI ────────────────────────────────────────────────
 function Lbl({ ch }: { ch: React.ReactNode }) {
   return <label className="block text-[10px] font-bold uppercase tracking-[0.13em] mb-1.5" style={{ color:MUTED }}>{ch}</label>;
 }
@@ -622,7 +627,7 @@ function LFLogo({ size=40 }: { size?:number }) {
   );
 }
 
-// â”€â”€â”€ Live Camera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Live Camera ──────────────────────────────────────────────
 function LiveCamera({ label, onCapture, onClose }: { label:string; onCapture:(url:string)=>void; onClose:()=>void }) {
   const videoRef  = useRef<HTMLVideoElement>(null);
   const [ready,   setReady]   = useState(false);
@@ -665,7 +670,7 @@ function LiveCamera({ label, onCapture, onClose }: { label:string; onCapture:(ur
               <div className="rounded-3xl border-4 opacity-70" style={{ width:"78%", height:"65%", borderColor:Y }}/>
             </div>
             {!ready && <div className="absolute inset-0 flex items-center justify-center" style={{ background:"rgba(0,0,0,0.6)" }}>
-              <div className="text-center text-white"><div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-2"/><p className="text-sm">Starting cameraâ€¦</p></div>
+              <div className="text-center text-white"><div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-2"/><p className="text-sm">Starting camera…</p></div>
             </div>}
           </>
         ) : <img src={preview} className="w-full h-full object-cover"/>}
@@ -680,7 +685,7 @@ function LiveCamera({ label, onCapture, onClose }: { label:string; onCapture:(ur
         ) : (
           <div className="flex gap-3">
             <button onClick={()=>{ setPreview(null); startCamera(); }} className="flex-1 py-4 rounded-2xl font-bold text-sm border-2 text-white" style={{ borderColor:"rgba(255,255,255,0.3)" }}>Retake</button>
-            <button onClick={()=>{ if(preview){ onCapture(preview); onClose(); }}} className="flex-1 py-4 rounded-2xl font-bold text-sm" style={{ background:Y, color:TEXT }}>Use Photo âœ“</button>
+            <button onClick={()=>{ if(preview){ onCapture(preview); onClose(); }}} className="flex-1 py-4 rounded-2xl font-bold text-sm" style={{ background:Y, color:TEXT }}>Use Photo ✓</button>
           </div>
         )}
       </div>
@@ -688,7 +693,7 @@ function LiveCamera({ label, onCapture, onClose }: { label:string; onCapture:(ur
   );
 }
 
-// â”€â”€â”€ Doc Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Doc Upload ───────────────────────────────────────────────
 function DocUpload({ label, tag, fieldKey, files, setFiles, allowCamera, cameraLabel }:{
   label:string; tag:string; fieldKey:string;
   files:Record<string,{name:string;url:string}|null>;
@@ -707,7 +712,7 @@ function DocUpload({ label, tag, fieldKey, files, setFiles, allowCamera, cameraL
           <div>
             <p className="text-sm font-bold" style={{ color:TEXT }}>{label}</p>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background:tag==="Mandatory"?"rgba(220,38,38,0.08)":"rgba(107,122,141,0.1)", color:tag==="Mandatory"?ERR:MUTED }}>{tag}</span>
-            {f && <span className="ml-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>âœ“ Done</span>}
+            {f && <span className="ml-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>✓ Done</span>}
           </div>
           {f ? (
             <button onClick={()=>setFiles(p=>({...p,[fieldKey]:null}))} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background:"rgba(220,38,38,0.1)" }}><X size={13} color={ERR}/></button>
@@ -722,7 +727,7 @@ function DocUpload({ label, tag, fieldKey, files, setFiles, allowCamera, cameraL
         {f ? (
           <div>{f.url.startsWith("data:image")||f.url.startsWith("blob:")
             ? <img src={f.url} className="w-full h-28 object-cover rounded-xl"/>
-            : <p className="text-xs truncate" style={{ color:MUTED }}>ðŸ“„ {f.name}</p>}
+            : <p className="text-xs truncate" style={{ color:MUTED }}>📄 {f.name}</p>}
           </div>
         ) : (
           <button onClick={()=>inputRef.current?.click()} className="w-full h-14 rounded-xl border-2 border-dashed flex items-center justify-center" style={{ borderColor:BORD }}>
@@ -734,7 +739,7 @@ function DocUpload({ label, tag, fieldKey, files, setFiles, allowCamera, cameraL
   );
 }
 
-// â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sidebar ─────────────────────────────────────────────────
 function Sidebar({ screen, navigate, session }:{ screen:Screen; navigate:(s:Screen)=>void; session:Session }) {
   const isAdmin=session.role==="admin"; const isAgent=session.role==="agent";
   type NavItem = [Screen, React.ComponentType<{size?:number;color?:string}>, string];
@@ -796,7 +801,7 @@ function PH({ title, sub, onBack }:{ title:string; sub?:string; onBack?:()=>void
   );
 }
 
-// â”€â”€â”€ SPLASH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── SPLASH ──────────────────────────────────────────────────
 function SplashScreen({ navigate }:GP) {
   const [showActions, setShowActions] = useState(false);
 
@@ -849,7 +854,7 @@ function SplashScreen({ navigate }:GP) {
   return (
     <div className="flex flex-col h-full min-h-[100svh]" style={{ background:Y }}>
 
-      {/* â”€â”€ Section 1 â€” full yellow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Section 1 — full yellow ─────────────────────────── */}
       <div className="flex flex-col gap-0 px-7 relative overflow-hidden transition-all duration-300 min-h-[100svh] pt-6 pb-5" style={{ background:Y }}>
         {/* decorative circles */}
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full pointer-events-none" style={{ background:"rgba(0,0,0,0.06)" }}/>
@@ -870,11 +875,11 @@ function SplashScreen({ navigate }:GP) {
             Fast Loans.<br/>Simple<br/>Repayment.<br/><span className="text-[22px] sm:text-3xl leading-tight">with LAXMI FINANCE.</span>
           </h2>
           <p className="text-[14px] leading-relaxed mb-5" style={{ color:"rgba(0,0,0,0.55)" }}>
-            Personal & Business loans up to <strong style={{ color:TEXT }}>â‚¹20,000</strong>.<br/>
-            Daily EMI â€” 33 or 66 day plans.
+            Personal & Business loans up to <strong style={{ color:TEXT }}>₹20,000</strong>.<br/>
+            Daily EMI — 33 or 66 day plans.
           </p>
           <div className="grid grid-cols-3 gap-2.5 max-w-[286px]">
-            {[["â‚¹20K","Max Loan"],["Daily","EMI"],["48 hrs","Approval"]].map(([v,l])=>(
+            {[["₹20K","Max Loan"],["Daily","EMI"],["48 hrs","Approval"]].map(([v,l])=>(
               <div key={l} className="rounded-2xl px-2 py-2.5 text-center min-h-[62px] flex flex-col items-center justify-center" style={{ background:"rgba(0,0,0,0.1)" }}>
                 <p className="font-black text-base leading-tight" style={{ color:TEXT }}>{v}</p>
                 <p className="text-[10px] mt-0.5 font-semibold" style={{ color:"rgba(0,0,0,0.5)" }}>{l}</p>
@@ -897,7 +902,7 @@ function SplashScreen({ navigate }:GP) {
   );
 }
 
-// â”€â”€â”€ LOGIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── LOGIN ────────────────────────────────────────────────────
 function LoginScreen({ navigate, db, setDB, setSession }:GP) {
   const [phone,setPhone]=useState(""); const [pw,setPw]=useState(""); const [show,setShow]=useState(false);
   const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
@@ -926,7 +931,7 @@ function LoginScreen({ navigate, db, setDB, setSession }:GP) {
       <div className="hidden sm:flex sm:w-[300px] shrink-0 flex-col justify-center items-start px-10" style={{ background:Y }}>
         <LFLogo size={52}/><h2 className="text-3xl font-black mt-5 mb-2" style={{ color:TEXT }}>Customer<br/>Login</h2>
         <p style={{ color:Y2 }} className="text-sm">Sign in with your registered mobile and password.</p>
-        <button onClick={()=>navigate("register")} className="mt-8 px-5 py-3 rounded-2xl text-sm font-bold" style={{ background:TEXT, color:Y }}>New? Register â†’</button>
+        <button onClick={()=>navigate("register")} className="mt-8 px-5 py-3 rounded-2xl text-sm font-bold" style={{ background:TEXT, color:Y }}>New? Register →</button>
       </div>
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 py-12 max-w-md mx-auto w-full">
         <div className="sm:hidden flex items-center gap-3 mb-10"><LFLogo size={40}/><div><p className="text-xl font-bold" style={{ color:TEXT }}>Laxmi Finance</p></div></div>
@@ -947,17 +952,17 @@ function LoginScreen({ navigate, db, setDB, setSession }:GP) {
           {err&&<p className="text-xs font-semibold px-1" style={{ color:ERR }}>{err}</p>}
         </div>
         <button onClick={go} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm mb-5 flex items-center justify-center gap-2 transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT, opacity:loading?0.7:1 }}>
-          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Signing inâ€¦</>:"Sign In â†’"}
+          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Signing in…</>:"Sign In →"}
         </button>
         <p className="text-center text-sm" style={{ color:MUTED }}>{"Don't have an account? "}<button onClick={()=>navigate("register")} className="font-bold" style={{ color:Y2 }}>Register</button></p>
-        <p className="text-center mt-2 text-xs" style={{ color:MUTED }}><button onClick={()=>navigate("agent-login")} style={{ color:Y2 }}>Agent Login</button> Â· <button onClick={()=>navigate("admin-login")} style={{ color:MUTED }}>Admin</button></p>
+        <p className="text-center mt-2 text-xs" style={{ color:MUTED }}><button onClick={()=>navigate("agent-login")} style={{ color:Y2 }}>Agent Login</button> · <button onClick={()=>navigate("admin-login")} style={{ color:MUTED }}>Admin</button></p>
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ REGISTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€â”€ Auto-advance OTP Input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── REGISTER ─────────────────────────────────────────────────
+// ─── Auto-advance OTP Input ───────────────────────────────────
 function OTPInput({ onComplete }: { onComplete?: (val: string) => void }) {
   const refs = [useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null)];
   const [vals, setVals] = useState(["","","","","",""]);
@@ -1016,9 +1021,11 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
         method: 'POST',
         body: JSON.stringify({ name:name.trim(), phone, password:pw, password_confirmation:conf }),
       });
+      const sess = {role:"customer" as const,userId:String(user.id),name:user.name};
       setDB(d=>({...d,customers:[...d.customers,{id:String(user.id),name:user.name,phone:user.phone,password:"",token:user.token||"",createdAt:new Date().toLocaleDateString("en-IN")}]}));
       setToken(user.token||"");
-      setSession({role:"customer",userId:String(user.id),name:user.name});
+      setSession(sess);
+      localStorage.setItem('lf_session', JSON.stringify(sess));
       try { const data = await api('/data'); setDB(d=>({...d,...data})); } catch {}
       setStep(2);
       toast.success("Account created!");
@@ -1047,7 +1054,7 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
                 <p className="text-xs mt-1.5" style={{ color:MUTED }}>A 6-digit OTP will be sent for verification.</p>
               </F>
               {err&&<p className="text-xs font-semibold" style={{ color:ERR }}>{err}</p>}
-              <button onClick={sendOTP} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Send OTP â†’</button>
+              <button onClick={sendOTP} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Send OTP →</button>
               <p className="text-center text-sm" style={{ color:MUTED }}>Already registered? <button onClick={()=>navigate("login")} className="font-bold" style={{ color:Y2 }}>Login</button></p>
             </div>
           )}
@@ -1081,7 +1088,7 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
                 <p className="text-xl font-bold tracking-wider mb-1.5" style={{ color:TEXT, fontFamily:"monospace" }}>{token}</p>
                 <p className="text-xs" style={{ color:MUTED }}>Converts to a permanent Loan ID upon approval.</p>
               </div>
-              <button onClick={()=>navigate("customer-home")} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Go to Dashboard â†’</button>
+              <button onClick={()=>navigate("customer-home")} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Go to Dashboard →</button>
             </div>
           )}
         </div>
@@ -1090,7 +1097,7 @@ function RegisterScreen({ navigate, db, setDB, setSession }:GP) {
   );
 }
 
-// â”€â”€â”€ CUSTOMER HOME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── CUSTOMER HOME ────────────────────────────────────────────
 function CustomerHomeScreen({ navigate, session, db }:GP) {
   const customer = db.customers.find(c=>c.id===session.userId);
   const myApps   = db.applications.filter(a=>a.customerId===session.userId);
@@ -1143,7 +1150,7 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
           <div className="rounded-3xl p-5 flex items-center gap-4" style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)" }}>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background:Y }}><Plus size={22} color={TEXT}/></div>
             <div className="flex-1"><p className="font-bold text-white">No active loan</p><p className="text-xs" style={{ color:"rgba(255,255,255,0.55)" }}>Apply for Personal or Business loan</p></div>
-            <button onClick={()=>navigate("loan-apply")} className="px-4 py-2.5 rounded-2xl text-sm font-bold shrink-0" style={{ background:Y, color:TEXT }}>Apply â†’</button>
+            <button onClick={()=>navigate("loan-apply")} className="px-4 py-2.5 rounded-2xl text-sm font-bold shrink-0" style={{ background:Y, color:TEXT }}>Apply →</button>
           </div>
         )}
       </div>
@@ -1151,7 +1158,7 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
       {/* White pull-up content */}
       <div className="flex-1 overflow-y-auto -mt-8 rounded-t-[32px] bg-white px-4 sm:px-5 pt-6 sm:pt-7 pb-4">
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Colorful 2Ã—2 action grid */}
+          {/* Colorful 2×2 action grid */}
           <div>
             <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color:MUTED }}>Quick Actions</p>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -1168,7 +1175,7 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
           {/* Status banners & timeline */}
           {latest?.status==="approved" && (
             <div className="rounded-3xl p-5" style={{ background:YBG, border:`2px solid ${Y}` }}>
-              <p className="font-bold mb-1" style={{ color:TEXT }}>ðŸŽ‰ Loan Approved & Disbursed!</p>
+              <p className="font-bold mb-1" style={{ color:TEXT }}>🎉 Loan Approved & Disbursed!</p>
               <p className="text-sm" style={{ color:Y2 }}>Pay {fmt(latest.dailyEMI)} daily for {latest.tenure} days.</p>
               {latest.assignedAgent && (
                 <div className="mt-3 p-3 rounded-2xl flex items-center gap-3" style={{ background:CARD, border:`1px solid ${BORD}` }}>
@@ -1187,7 +1194,7 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
             <div className="rounded-3xl p-5 border" style={{ background:CARD, borderColor:BORD }}>
               <div className="flex justify-between items-center mb-5">
                 <p className="font-bold" style={{ color:TEXT }}>Application Progress</p>
-                <button onClick={()=>navigate("loan-status")} className="text-xs font-bold" style={{ color:Y2 }}>Details â†’</button>
+                <button onClick={()=>navigate("loan-status")} className="text-xs font-bold" style={{ color:Y2 }}>Details →</button>
               </div>
               {[
                 { l:"Submitted",          done:true,   date:latest.createdAt },
@@ -1219,11 +1226,11 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
           )}
           {myApps.length>0 && (
             <div className="rounded-3xl p-5 border" style={{ background:CARD, borderColor:BORD }}>
-              <div className="flex justify-between items-center mb-4"><p className="font-bold" style={{ color:TEXT }}>Loan History</p><button onClick={()=>navigate("loan-status")} className="text-xs font-bold" style={{ color:Y2 }}>View All â†’</button></div>
+              <div className="flex justify-between items-center mb-4"><p className="font-bold" style={{ color:TEXT }}>Loan History</p><button onClick={()=>navigate("loan-status")} className="text-xs font-bold" style={{ color:Y2 }}>View All →</button></div>
               {[...myApps].reverse().slice(0,3).map(app=>(
                 <div key={app.id} className="flex items-center gap-3 py-3 border-b last:border-0" style={{ borderColor:BORD }}>
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background:YBG }}><CreditCard size={18} color={Y2}/></div>
-                  <div className="flex-1"><p className="text-sm font-bold" style={{ color:TEXT }}>{app.loanType} Â· {fmt(app.amount)}</p><p className="text-xs" style={{ color:MUTED }}>{app.tenure} days Â· {fmt(app.dailyEMI)}/day</p></div>
+                  <div className="flex-1"><p className="text-sm font-bold" style={{ color:TEXT }}>{app.loanType} · {fmt(app.amount)}</p><p className="text-xs" style={{ color:MUTED }}>{app.tenure} days · {fmt(app.dailyEMI)}/day</p></div>
                   <Chip status={app.status}/>
                 </div>
               ))}
@@ -1236,7 +1243,7 @@ function CustomerHomeScreen({ navigate, session, db }:GP) {
   );
 }
 
-// â”€â”€â”€ LOAN APPLICATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── LOAN APPLICATION ─────────────────────────────────────────
 function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
   const [step,setStep]=useState(0);
   const [form,setForm]=useState({ name:session.name||"", phone:"", dob:"", gender:"Male", address:"", city:"", pinCode:"", income:"", coName:"", coPhone:"", coRelation:"Spouse", coAddress:"", loanType:"Personal" as "Personal"|"Business", amount:"", tenure:33 as 33|66, purpose:"", declared:false, aadhaar:"", pan:"" });
@@ -1264,11 +1271,11 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
       for (const [key, file] of Object.entries(files)) {
         if (file) {
           try {
-            // Use apiUpload to POST the file as multipart/form-data and get a /storage/â€¦ path
+            // Use apiUpload to POST the file as multipart/form-data and get a /storage/… path
             const path = await apiUpload(file.url, `${key}-${Date.now()}.jpg`);
             docs[key] = path;
           } catch {
-            // Fallback: compress and embed as base64 (smaller, ~50â€“80 KB per image)
+            // Fallback: compress and embed as base64 (smaller, ~50–80 KB per image)
             try {
               const base64 = await fileToBase64(file.url);
               docs[key] = await compressImage(base64, 600, 600, 0.6);
@@ -1279,7 +1286,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
         }
       }
 
-      // Step 2: Fresh CSRF token before the loan POST (prevents stale-token 419 â†’ 401 loop)
+      // Step 2: Fresh CSRF token before the loan POST (prevents stale-token 419 → 401 loop)
       csrfReady = null;
       await ensureCsrf();
 
@@ -1333,14 +1340,14 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               <F label="City / Town"><input value={form.city} onChange={e=>setF("city",e.target.value)} placeholder="City" className={inp} style={iSt}/></F>
               <F label="PIN Code">
                 <input type="text" inputMode="numeric" value={form.pinCode} onChange={e=>setF("pinCode",e.target.value.replace(/\D/g,"").slice(0,6))} maxLength={6} placeholder="e.g. 700108" className={inp} style={{...iSt, borderColor:form.pinCode.length===6&&(parseInt(form.pinCode)<700108||parseInt(form.pinCode)>700131)?ERR:iSt.borderColor}}/>
-                {form.pinCode.length===6&&(parseInt(form.pinCode)<700108||parseInt(form.pinCode)>700131)&&<p className="text-xs mt-1 font-semibold" style={{ color:ERR }}>Service available only for PIN codes 700108â€“700131</p>}
+                {form.pinCode.length===6&&(parseInt(form.pinCode)<700108||parseInt(form.pinCode)>700131)&&<p className="text-xs mt-1 font-semibold" style={{ color:ERR }}>Service available only for PIN codes 700108–700131</p>}
               </F>
             </div>
-            <F label="Monthly Income (â‚¹)"><input type="number" value={form.income} onChange={e=>setF("income",e.target.value)} placeholder="e.g. 15000" className={inp} style={iSt}/></F>
+            <F label="Monthly Income (₹)"><input type="number" value={form.income} onChange={e=>setF("income",e.target.value)} placeholder="e.g. 15000" className={inp} style={iSt}/></F>
           </>)}
           {step===1&&(<>
             <div className="rounded-2xl p-4 border-2" style={{ borderColor:Y, background:YBG }}>
-              <div className="flex items-start gap-2.5"><Info size={15} color={Y2} className="mt-0.5 shrink-0"/><p className="text-sm" style={{ color:TEXT }}><strong>Co-Borrower is mandatory</strong> â€” equally responsible for daily EMI repayment.</p></div>
+              <div className="flex items-start gap-2.5"><Info size={15} color={Y2} className="mt-0.5 shrink-0"/><p className="text-sm" style={{ color:TEXT }}><strong>Co-Borrower is mandatory</strong> — equally responsible for daily EMI repayment.</p></div>
             </div>
             <F label="Co-Borrower Full Name"><input value={form.coName} onChange={e=>setF("coName",e.target.value)} placeholder="Full name as per Aadhaar" className={inp} style={iSt}/></F>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -1356,17 +1363,17 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               <div className="grid grid-cols-2 gap-3">
                 {(["Personal","Business"] as const).map(t=>(
                   <button key={t} onClick={()=>setF("loanType",t)} className="py-6 rounded-3xl border-2 text-center transition-all active:scale-[0.97]" style={{ borderColor:form.loanType===t?TEXT:BORD, background:form.loanType===t?TEXT:CARD }}>
-                    <div className="text-3xl mb-2">{t==="Personal"?"ðŸ‘¤":"ðŸª"}</div>
+                    <div className="text-3xl mb-2">{t==="Personal"?"👤":"🏪"}</div>
                     <div className="text-sm font-bold" style={{ color:form.loanType===t?Y:TEXT }}>{t} Loan</div>
-                    <div className="text-[10px] mt-0.5" style={{ color:form.loanType===t?"rgba(255,255,255,0.5)":MUTED }}>up to â‚¹20,000</div>
+                    <div className="text-[10px] mt-0.5" style={{ color:form.loanType===t?"rgba(255,255,255,0.5)":MUTED }}>up to ₹20,000</div>
                   </button>
                 ))}
               </div>
             </F>
-            <F label={`Loan Amount (max â‚¹${MAX_AMT.toLocaleString("en-IN")})`}>
-              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold" style={{ color:MUTED }}>â‚¹</span>
+            <F label={`Loan Amount (max ₹${MAX_AMT.toLocaleString("en-IN")})`}>
+              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold" style={{ color:MUTED }}>₹</span>
               <input type="number" value={form.amount} onChange={e=>setF("amount",e.target.value)} placeholder="Enter amount" min={1000} max={MAX_AMT} className={inp+" pl-8"} style={iSt}/></div>
-              {amt>MAX_AMT&&<p className="text-xs mt-1 font-semibold" style={{ color:ERR }}>Maximum is â‚¹{MAX_AMT.toLocaleString("en-IN")}</p>}
+              {amt>MAX_AMT&&<p className="text-xs mt-1 font-semibold" style={{ color:ERR }}>Maximum is ₹{MAX_AMT.toLocaleString("en-IN")}</p>}
             </F>
             {safeAmt>=1000&&(
               <F label="Choose EMI Plan">
@@ -1375,7 +1382,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
                     <button key={t} onClick={()=>setF("tenure",t)} className="p-4 rounded-2xl border-2 text-left transition-all" style={{ borderColor:sel?TEXT:BORD, background:sel?TEXT:CARD }}>
                       <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold" style={{ color:sel?Y:MUTED }}>{t}-Day Plan</span>{sel&&<Check size={14} color={Y}/>}</div>
                       <p className="text-xl font-black" style={{ color:sel?Y:TEXT }}>{fmt(e.daily)}<span className="text-xs font-normal" style={{ color:sel?"rgba(255,255,255,0.45)":MUTED }}>/day</span></p>
-                      <p className="text-[10px] mt-1" style={{ color:sel?"rgba(255,255,255,0.45)":MUTED }}>Total: {fmt(e.total)} Â· â‚¹{Math.round(safeAmt*0.04)}/day</p>
+                      <p className="text-[10px] mt-1" style={{ color:sel?"rgba(255,255,255,0.45)":MUTED }}>Total: {fmt(e.total)} · ₹{Math.round(safeAmt*0.04)}/day</p>
                     </button>
                   ); })}
                 </div>
@@ -1413,16 +1420,16 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               <CheckCircle size={14} color={OK} className="mt-0.5 shrink-0"/><p className="text-xs" style={{ color:"#065F46" }}>Review all details before submitting. You cannot edit after submission.</p>
             </div>
             {[
-              { t:"Personal",    rows:[["Name",form.name||session.name],["Mobile",form.phone||"â€”"],["Aadhaar Number",form.aadhaar||"â€”"],["PAN Number",form.pan||"â€”"],["City",form.city||"â€”"],["PIN Code",form.pinCode||"â€”"],["Income",form.income?fmt(parseInt(form.income)):"â€”"],["Address",form.address||"â€”"]] },
-              { t:"Co-Borrower", rows:[["Name",form.coName||"â€”"],["Mobile",form.coPhone||"â€”"],["Relation",form.coRelation],["Address",form.coAddress||"â€”"]] },
-              { t:"Loan",        rows:[["Type",`${form.loanType} Loan`],["Amount",fmt(safeAmt)],["Plan",`${form.tenure} days daily`],["Daily EMI",selEMI?fmt(selEMI.daily):"â€”"],["Total",selEMI?fmt(selEMI.total):"â€”"],["Purpose",form.purpose||"â€”"]] },
-              { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"âœ“ Uploaded":"Pending"],["PAN Card",files.pan?"âœ“ Uploaded":"Pending"],["Photo",files.photo?"âœ“ Captured":"Pending"],["Signature",files.signature?"âœ“ Captured":"Pending"],["Co-Borrower Sig",files.coSignature?"âœ“ Captured":"Pending"]] },
+              { t:"Personal",    rows:[["Name",form.name||session.name],["Mobile",form.phone||"—"],["Aadhaar Number",form.aadhaar||"—"],["PAN Number",form.pan||"—"],["City",form.city||"—"],["PIN Code",form.pinCode||"—"],["Income",form.income?fmt(parseInt(form.income)):"—"],["Address",form.address||"—"]] },
+              { t:"Co-Borrower", rows:[["Name",form.coName||"—"],["Mobile",form.coPhone||"—"],["Relation",form.coRelation],["Address",form.coAddress||"—"]] },
+              { t:"Loan",        rows:[["Type",`${form.loanType} Loan`],["Amount",fmt(safeAmt)],["Plan",`${form.tenure} days daily`],["Daily EMI",selEMI?fmt(selEMI.daily):"—"],["Total",selEMI?fmt(selEMI.total):"—"],["Purpose",form.purpose||"—"]] },
+              { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"✓ Uploaded":"Pending"],["PAN Card",files.pan?"✓ Uploaded":"Pending"],["Photo",files.photo?"✓ Captured":"Pending"],["Signature",files.signature?"✓ Captured":"Pending"],["Co-Borrower Sig",files.coSignature?"✓ Captured":"Pending"]] },
             ].map(s=>(
               <div key={s.t} className="rounded-2xl p-4 border-2" style={{ borderColor:BORD }}>
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>{s.t}</p>
                 {s.rows.map(([k,v])=>(
                   <div key={k} className="flex justify-between py-1.5 border-b last:border-0" style={{ borderColor:BORD }}>
-                    <span className="text-xs" style={{ color:MUTED }}>{k}</span><span className="text-xs font-bold" style={{ color:String(v).startsWith("âœ“")?OK:TEXT }}>{v}</span>
+                    <span className="text-xs" style={{ color:MUTED }}>{k}</span><span className="text-xs font-bold" style={{ color:String(v).startsWith("✓")?OK:TEXT }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -1437,7 +1444,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
           <button onClick={()=>step<labels.length-1?setStep(s=>s+1):handleSubmit()} disabled={!canProceed()||submitting}
             className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]"
             style={{ background:canProceed()&&!submitting?TEXT:BORD, color:canProceed()&&!submitting?Y:MUTED }}>
-            {submitting?"Submittingâ€¦":step===labels.length-1?"âœ“ Submit Application":`Continue â†’ ${labels[step+1]}`}
+            {submitting?"Submitting…":step===labels.length-1?"✓ Submit Application":`Continue → ${labels[step+1]}`}
           </button>
           {!canProceed()&&<p className="text-center text-xs" style={{ color:MUTED }}>
             {step===0?(form.pinCode.length===6&&(parseInt(form.pinCode)<700108||parseInt(form.pinCode)>700131)?"PIN code must be between 700108 and 700131":"Fill all required fields"):step===1?"Co-borrower details are mandatory":step===2?"Enter amount and select EMI plan":step===3?"Upload Aadhaar, PAN, Photo, and Signature":step===5?"Accept the declaration":""}
@@ -1448,19 +1455,19 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
   );
 }
 
-// â”€â”€â”€ LOAN CALCULATOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── LOAN CALCULATOR ─────────────────────────────────────────
 function LoanCalculatorScreen({ navigate }:GP) {
   const [amount,setAmount]=useState(10000);
   const e33=calcEMI(amount,33); const e66=calcEMI(amount,66);
   return (
     <div className="flex flex-col h-full" style={{ background:BG }}>
-      <PH title="EMI Calculator" sub="Daily repayment â€” 33 or 66 day plans" onBack={()=>navigate("customer-home")}/>
+      <PH title="EMI Calculator" sub="Daily repayment — 33 or 66 day plans" onBack={()=>navigate("customer-home")}/>
       <div className="flex-1 overflow-y-auto -mt-4 rounded-t-[28px] px-5 pt-7 pb-8 bg-white">
         <div className="max-w-lg mx-auto space-y-6">
           <div>
             <div className="flex justify-between items-center mb-2"><Lbl ch="Loan Amount"/><span className="text-sm font-black" style={{ color:TEXT }}>{fmt(amount)}</span></div>
             <input type="range" min={1000} max={MAX_AMT} step={500} value={amount} onChange={e=>setAmount(Number(e.target.value))} className="w-full h-3 rounded-full appearance-none cursor-pointer" style={{ accentColor:Y }}/>
-            <div className="flex justify-between text-[10px] mt-1" style={{ color:MUTED }}><span>â‚¹1,000</span><span>{fmt(MAX_AMT)}</span></div>
+            <div className="flex justify-between text-[10px] mt-1" style={{ color:MUTED }}><span>₹1,000</span><span>{fmt(MAX_AMT)}</span></div>
           </div>
           <div className="p-5 rounded-3xl text-center" style={{ background:YBG, border:`2px solid ${Y}` }}>
             <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color:Y2 }}>Selected Amount</p>
@@ -1480,14 +1487,14 @@ function LoanCalculatorScreen({ navigate }:GP) {
               </div>
             ))}
           </div>
-          <button onClick={()=>navigate("loan-apply")} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Apply for This Loan â†’</button>
+          <button onClick={()=>navigate("loan-apply")} className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT }}>Apply for This Loan →</button>
         </div>
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ Other customer screens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Other customer screens ───────────────────────────────────
 function LoanStatusScreen({ navigate, session, db }:GP) {
   const myApps=db.applications.filter(a=>a.customerId===session.userId);
   return (
@@ -1536,7 +1543,7 @@ function EMIScreen({ navigate, session, db }:GP) {
     <div className="flex flex-col h-full" style={{ background:BG }}>
       <div className="px-5 pt-5 pb-16 shrink-0" style={{ background:Y }}>
         <h1 className="text-2xl font-black mb-0.5" style={{ color:TEXT }}>EMI Tracker</h1>
-        <p className="text-sm mb-5" style={{ color:Y2 }}>{app.id} Â· {app.loanType} Loan</p>
+        <p className="text-sm mb-5" style={{ color:Y2 }}>{app.id} · {app.loanType} Loan</p>
         <div className="flex items-center gap-4 sm:gap-5">
           <div className="relative shrink-0">
             <svg width="80" height="80" viewBox="0 0 86 86" className="sm:w-[86px] sm:h-[86px]">
@@ -1560,7 +1567,7 @@ function EMIScreen({ navigate, session, db }:GP) {
               <div key={k} className="flex justify-between py-2.5 border-b last:border-0" style={{ borderColor:BORD }}><span className="text-sm" style={{ color:MUTED }}>{k}</span><span className="text-sm font-bold" style={{ color:TEXT }}>{v}</span></div>
             ))}
           </div>
-          <button onClick={()=>toast.error("Online payment is currently unavailable. Please contact our Agent.")} className="w-full py-4 rounded-2xl font-bold text-sm" style={{ background:Y, color:TEXT }}>Pay Today's EMI â€” {fmt(app.dailyEMI)}</button>
+          <button onClick={()=>toast.error("Online payment is currently unavailable. Please contact our Agent.")} className="w-full py-4 rounded-2xl font-bold text-sm" style={{ background:Y, color:TEXT }}>Pay Today's EMI — {fmt(app.dailyEMI)}</button>
           {app.assignedAgent && (
             <div className="mt-3 p-3 rounded-2xl flex items-center gap-3 border" style={{ borderColor:BORD }}>
               <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background:TEXT }}><Users size={15} color={Y}/></div>
@@ -1581,7 +1588,7 @@ function EMIScreen({ navigate, session, db }:GP) {
 function NotificationsScreen({ navigate, session, db }:GP) {
   const isAdmin=session.role==="admin"; const isAgent=session.role==="agent";
   const apps=isAdmin||isAgent?db.applications:db.applications.filter(a=>a.customerId===session.userId);
-  const notifs=[...apps.map(a=>({ Icon:CheckCircle, color:a.status==="approved"?OK:a.status==="rejected"?ERR:a.status==="cancelled"?MUTED:WARN, title:a.status==="approved"?"Loan Approved":a.status==="rejected"?"Application Rejected":a.status==="cancelled"?"Loan Cancelled":"Application Submitted", body:`${a.id} Â· ${a.customerName} Â· ${fmt(a.amount)} â€” ${a.status}.`, time:a.createdAt, unread:a.status==="pending" }))];
+  const notifs=[...apps.map(a=>({ Icon:CheckCircle, color:a.status==="approved"?OK:a.status==="rejected"?ERR:a.status==="cancelled"?MUTED:WARN, title:a.status==="approved"?"Loan Approved":a.status==="rejected"?"Application Rejected":a.status==="cancelled"?"Loan Cancelled":"Application Submitted", body:`${a.id} · ${a.customerName} · ${fmt(a.amount)} — ${a.status}.`, time:a.createdAt, unread:a.status==="pending" }))];
   if(notifs.length===0) notifs.push({ Icon:Bell, color:MUTED, title:"No notifications", body:"No activity to show yet.", time:"", unread:false });
   const backScreen=isAdmin?"admin-dashboard":isAgent?"agent-dashboard":"customer-home";
   return (
@@ -1624,7 +1631,7 @@ function ProfileScreen({ navigate, session, db }:GP) {
       <div className="px-5 pt-5 pb-16 shrink-0" style={{ background:Y }}>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full flex items-center justify-center font-black text-xl shrink-0" style={{ background:"rgba(0,0,0,0.15)", color:TEXT }}>{initials}</div>
-          <div><h2 className="text-xl font-black" style={{ color:TEXT }}>{session.name}</h2><p className="text-sm" style={{ color:Y2 }}>+91 {customer?.phone||"â€”"}</p><span className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full mt-1" style={{ background:"rgba(0,0,0,0.12)", color:TEXT }}>{customer?.token||"â€”"}</span></div>
+          <div><h2 className="text-xl font-black" style={{ color:TEXT }}>{session.name}</h2><p className="text-sm" style={{ color:Y2 }}>+91 {customer?.phone||"—"}</p><span className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full mt-1" style={{ background:"rgba(0,0,0,0.12)", color:TEXT }}>{customer?.token||"—"}</span></div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto -mt-8 rounded-t-[32px] px-5 pt-6 pb-4 bg-white">
@@ -1648,7 +1655,7 @@ function ProfileScreen({ navigate, session, db }:GP) {
           </button>
           <button onClick={deleteAccount} disabled={deleting} className="w-full rounded-2xl p-4 flex items-center gap-4 border" style={{ background:"rgba(220,38,38,0.04)", borderColor:"rgba(220,38,38,0.15)", opacity:deleting?0.6:1 }}>
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background:"rgba(220,38,38,0.08)" }}><Trash2 size={18} color={ERR}/></div>
-            <div className="flex-1"><span className="text-sm font-bold" style={{ color:ERR }}>{deleting?"Deletingâ€¦":"Delete Account"}</span><p className="text-[10px]" style={{ color:MUTED }}>Permanently remove your account</p></div>
+            <div className="flex-1"><span className="text-sm font-bold" style={{ color:ERR }}>{deleting?"Deleting…":"Delete Account"}</span><p className="text-[10px]" style={{ color:MUTED }}>Permanently remove your account</p></div>
           </button>
         </div>
       </div>
@@ -1659,14 +1666,14 @@ function ProfileScreen({ navigate, session, db }:GP) {
 
 function HelpScreen({ navigate }:GP) {
   const [open,setOpen]=useState<number|null>(null);
-  const faqs=[["How much can I borrow?","â‚¹1,000 to â‚¹20,000."],["What are the EMI plans?","33 days or 66 days â€” daily repayment at â‚¹40 per â‚¹1,000 per day."],["Is co-borrower mandatory?","Yes. All loans require a co-borrower equally responsible for repayment."],["What documents do I need?","Aadhaar, PAN, live photo. Business loans also need shop/business proof."],["How long does approval take?","24â€“48 hours after field verification."],["Can I repay early?","Yes, anytime. No prepayment penalty."],["What if I miss a payment?","â‚¹10/day late fee. Contact support if you need help."]];
+  const faqs=[["How much can I borrow?","₹1,000 to ₹20,000."],["What are the EMI plans?","33 days or 66 days — daily repayment at ₹40 per ₹1,000 per day."],["Is co-borrower mandatory?","Yes. All loans require a co-borrower equally responsible for repayment."],["What documents do I need?","Aadhaar, PAN, live photo. Business loans also need shop/business proof."],["How long does approval take?","24–48 hours after field verification."],["Can I repay early?","Yes, anytime. No prepayment penalty."],["What if I miss a payment?","₹10/day late fee. Contact support if you need help."]];
   return (
     <div className="flex flex-col h-full" style={{ background:BG }}>
       <PH title="Help & Support" sub="We're here 24/7" onBack={()=>navigate("customer-home")}/>
       <div className="flex-1 overflow-y-auto -mt-4 rounded-t-[28px] px-5 pt-7 pb-8 bg-white">
         <div className="max-w-lg mx-auto">
           <div className="grid grid-cols-3 gap-3 mb-7">
-            {[{Icon:Phone,l:"Call",s:"9AMâ€“9PM",c:OK,fn:()=>toast.success("Call us at 1800-XXX-XXXX (toll-free)")},{Icon:MessageSquare,l:"Chat",s:"Instant",c:INDIGO,fn:()=>toast.success("Live chat coming soon!")},{Icon:Mail,l:"Email",s:"24h reply",c:PINK,fn:()=>toast.success("Email: support@laxmifinance.in")}].map(c=>(
+            {[{Icon:Phone,l:"Call",s:"9AM–9PM",c:OK,fn:()=>toast.success("Call us at 1800-XXX-XXXX (toll-free)")},{Icon:MessageSquare,l:"Chat",s:"Instant",c:INDIGO,fn:()=>toast.success("Live chat coming soon!")},{Icon:Mail,l:"Email",s:"24h reply",c:PINK,fn:()=>toast.success("Email: support@laxmifinance.in")}].map(c=>(
               <button key={c.l} onClick={c.fn} className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2" style={{ borderColor:Y, background:YBG }}>
                 <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background:c.c }}><c.Icon size={18} color="white"/></div>
                 <p className="text-xs font-bold" style={{ color:TEXT }}>{c.l}</p><p className="text-[10px]" style={{ color:MUTED }}>{c.s}</p>
@@ -1691,7 +1698,7 @@ function HelpScreen({ navigate }:GP) {
   );
 }
 
-// â”€â”€â”€ AGENT LOGIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── AGENT LOGIN ──────────────────────────────────────────────
 function AgentLoginScreen({ navigate, db, setDB, setSession }:GP) {
   const [phone,setPhone]=useState(""); const [pw,setPw]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   async function go(){
@@ -1733,15 +1740,15 @@ function AgentLoginScreen({ navigate, db, setDB, setSession }:GP) {
           {err&&<p className="text-xs font-semibold" style={{ color:ERR }}>{err}</p>}
         </div>
         <button onClick={go} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm mb-4 flex items-center justify-center gap-2 transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT, opacity:loading?0.7:1 }}>
-          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Signing inâ€¦</>:"Sign In as Agent â†’"}</button>
+          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Signing in…</>:"Sign In as Agent →"}</button>
         <p className="text-center text-sm mb-2" style={{ color:MUTED }}>{"Don't have an agent account? "}<button onClick={()=>navigate("agent-register")} className="font-bold" style={{ color:Y2 }}>Register</button></p>
-        <button onClick={()=>navigate("splash")} className="w-full py-2 text-center text-xs" style={{ color:MUTED }}>â† Back to main</button>
+        <button onClick={()=>navigate("splash")} className="w-full py-2 text-center text-xs" style={{ color:MUTED }}>← Back to main</button>
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ AGENT REGISTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── AGENT REGISTER ──────────────────────────────────────────
 function AgentRegisterScreen({ navigate, setSession, setDB }:GP) {
   const [name,setName]=useState(""); const [phone,setPhone]=useState(""); const [pw,setPw]=useState(""); const [pw2,setPw2]=useState("");
   const [zone,setZone]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
@@ -1788,16 +1795,16 @@ function AgentRegisterScreen({ navigate, setSession, setDB }:GP) {
           {err&&<p className="text-xs font-semibold" style={{ color:ERR }}>{err}</p>}
         </div>
         <button onClick={go} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm mb-4 transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background:Y, color:TEXT, opacity:loading?0.7:1 }}>
-          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Registeringâ€¦</>:"Create Agent Account â†’"}
+          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Registering…</>:"Create Agent Account →"}
         </button>
         <p className="text-center text-sm mb-2" style={{ color:MUTED }}>{"Already have an account? "}<button onClick={()=>navigate("agent-login")} className="font-bold" style={{ color:Y2 }}>Sign In</button></p>
-        <button onClick={()=>navigate("splash")} className="w-full py-2 text-center text-xs" style={{ color:MUTED }}>â† Back to main</button>
+        <button onClick={()=>navigate("splash")} className="w-full py-2 text-center text-xs" style={{ color:MUTED }}>← Back to main</button>
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ AGENT DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── AGENT DASHBOARD ─────────────────────────────────────────
 function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
   const [tab,setTab]=useState<"visits"|"collection">("visits");
   const [search,setSearch]=useState("");
@@ -1939,7 +1946,7 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
           </div>
           {tab==="visits"&&(<>
             <div className="flex items-center gap-2 border-2 rounded-2xl px-3 py-2.5 mb-4" style={{ borderColor:BORD }}>
-              <Search size={14} color={MUTED}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Searchâ€¦" className="flex-1 text-xs bg-transparent outline-none" style={{ color:TEXT }}/>
+              <Search size={14} color={MUTED}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" className="flex-1 text-xs bg-transparent outline-none" style={{ color:TEXT }}/>
               {search&&<button onClick={()=>setSearch("")} style={{ color:MUTED }}><X size={12}/></button>}
             </div>
             {filtered.length===0&&<p className="text-center py-8 text-sm" style={{ color:MUTED }}>{allApps.length===0?"No applications yet. New customer registrations appear here.":"No results"}</p>}
@@ -1948,7 +1955,7 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
                 <div key={app.id} className="rounded-3xl p-5 border-2" style={{ background:CARD, borderColor:BORD }}>
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <div className="flex items-center gap-2"><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p>{visited[app.id]&&<span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>Visited âœ“</span>}</div>
+                      <div className="flex items-center gap-2"><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p>{visited[app.id]&&<span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>Visited ✓</span>}</div>
                       <p className="text-[10px] font-mono" style={{ color:MUTED }}>{app.id}</p>
                     </div>
                     <Chip status={app.status}/>
@@ -1961,7 +1968,7 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={()=>{ api('/agent/log',{method:'POST',body:JSON.stringify({application_number:app.id,action:'visited'})}).then(()=>{ setVisited(v=>({...v,[app.id]:true})); setDB(d=>({...d,agentLogs:[...d.agentLogs,{agentId:session.userId,appId:app.id,action:"visited",time:new Date().toLocaleString()}]})); toast.success("Visit marked"); }).catch((e:any)=>toast.error(e.message)); }}
                       className="px-3 py-2 rounded-xl text-[11px] font-bold active:opacity-85 whitespace-nowrap" style={{ background:visited[app.id]?"rgba(22,163,74,0.1)":YBG, color:visited[app.id]?OK:Y2 }}>
-                      {visited[app.id]?"âœ“ Visited":"Mark Visited"}
+                      {visited[app.id]?"✓ Visited":"Mark Visited"}
                     </button>
                   </div>
                 </div>
@@ -1975,7 +1982,7 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
                 <div key={app.id} className="rounded-3xl p-5 border-2" style={{ background:CARD, borderColor:BORD }}>
                   <div className="flex justify-between items-start mb-3">
                     <div><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p><p className="text-[10px] font-mono" style={{ color:MUTED }}>{app.id}</p></div>
-                    {collected[app.id]?<span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>Collected âœ“</span>:<span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background:YBG, color:Y2 }}>Pending</span>}
+                    {collected[app.id]?<span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>Collected ✓</span>:<span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background:YBG, color:Y2 }}>Pending</span>}
                   </div>
                   <div className="flex items-center gap-3 sm:gap-4 pt-3 border-t flex-wrap" style={{ borderColor:BORD }}>
                     <div className="flex-1 min-w-0"><p className="text-[9px] font-semibold" style={{ color:MUTED }}>Daily EMI Due</p><p className="text-xl sm:text-2xl font-black" style={{ color:TEXT }}>{fmt(app.dailyEMI)}</p></div>
@@ -1998,7 +2005,7 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
   );
 }
 
-// â”€â”€â”€ ADMIN LOGIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ADMIN LOGIN ──────────────────────────────────────────────
 function AdminLoginScreen({ navigate, setSession, setDB }:GP) {
   const [email,setEmail]=useState(""); const [pw,setPw]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   async function go(){
@@ -2035,15 +2042,15 @@ function AdminLoginScreen({ navigate, setSession, setDB }:GP) {
           {err&&<p className="text-xs font-semibold" style={{ color:ERR }}>{err}</p>}
         </div>
         <button onClick={go} disabled={loading} className="w-full py-4 rounded-2xl font-bold text-sm mb-3 flex items-center justify-center gap-2 transition-all active:scale-[0.98]" style={{ background:Y, color:TEXT, opacity:loading?0.7:1 }}>
-          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Signing inâ€¦</>:"Sign In â†’"}
+          {loading?<><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"/>Signing in…</>:"Sign In →"}
         </button>
-        <button onClick={()=>navigate("splash")} className="w-full py-2 text-center text-xs" style={{ color:MUTED }}>â† Back to main</button>
+        <button onClick={()=>navigate("splash")} className="w-full py-2 text-center text-xs" style={{ color:MUTED }}>← Back to main</button>
       </div>
     </div>
   );
 }
 
-// â”€â”€â”€ ADMIN: Full Application Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ADMIN: Full Application Detail Modal ─────────────────────
 function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssign, onCancel, onDelete, approving }:{
   app:LoanApp; agents:AgentUser[]; db:DB;
   onClose:()=>void; onApprove:()=>void; onReject:()=>void; onAssign:(a:string)=>void;
@@ -2075,9 +2082,9 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
             {app.status==="pending"&&(
               <>
                 <button onClick={onApprove} disabled={approving} className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85 flex items-center gap-1.5" style={{ background:OK, opacity:approving?0.7:1 }}>
-                  {approving ? <><RefreshCw size={12} className="animate-spin"/> Approving...</> : <>âœ“ Approve</>}
+                  {approving ? <><RefreshCw size={12} className="animate-spin"/> Approving...</> : <>✓ Approve</>}
                 </button>
-                <button onClick={onReject} disabled={approving} className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85" style={{ background:ERR, opacity:approving?0.7:1 }}>âœ• Reject</button>
+                <button onClick={onReject} disabled={approving} className="px-4 py-2 rounded-xl text-xs font-bold text-white active:opacity-85" style={{ background:ERR, opacity:approving?0.7:1 }}>✕ Reject</button>
               </>
             )}
             {app.status==="approved"&&onCancel&&(
@@ -2088,7 +2095,7 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
             )}
           </div>
         </div>
-        {/* Scrollable content â€” Resume style */}
+        {/* Scrollable content — Resume style */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
           {/* Profile header with photo */}
           <div className="flex items-start gap-4 p-4 rounded-3xl" style={{ background:YBG, border:`2px solid ${Y}` }}>
@@ -2120,14 +2127,14 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
             </div>
           </div>
 
-          {/* Applicant Details â€” resume grid */}
+          {/* Applicant Details — resume grid */}
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>Applicant Details</p>
             <div className="grid grid-cols-2 gap-2">
-              {[["Full Name",app.customerName],["Mobile",`+91 ${app.customerPhone}`],["Aadhaar Card",app.aadhaar||"â€”"],["PAN Card",app.pan||"â€”"],["City",app.city],["Monthly Income",fmt(app.income||0)],["Purpose",app.purpose],["Applied On",app.createdAt]].map(([k,v])=>(
+              {[["Full Name",app.customerName],["Mobile",`+91 ${app.customerPhone}`],["Aadhaar Card",app.aadhaar||"—"],["PAN Card",app.pan||"—"],["City",app.city],["Monthly Income",fmt(app.income||0)],["Purpose",app.purpose],["Applied On",app.createdAt]].map(([k,v])=>(
                 <div key={k} className="p-3 rounded-2xl" style={{ background:BG }}><p className="text-[9px] font-semibold" style={{ color:MUTED }}>{k}</p><p className="text-sm font-bold mt-0.5 truncate" style={{ color:TEXT }}>{v}</p></div>
               ))}
-              <div className="p-3 rounded-2xl col-span-2" style={{ background:BG }}><p className="text-[9px] font-semibold" style={{ color:MUTED }}>Address</p><p className="text-sm font-bold mt-0.5" style={{ color:TEXT }}>{app.address||"â€”"}</p></div>
+              <div className="p-3 rounded-2xl col-span-2" style={{ background:BG }}><p className="text-[9px] font-semibold" style={{ color:MUTED }}>Address</p><p className="text-sm font-bold mt-0.5" style={{ color:TEXT }}>{app.address||"—"}</p></div>
             </div>
           </div>
 
@@ -2135,7 +2142,7 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>Co-Borrower Details</p>
             <div className="grid grid-cols-2 gap-2">
-              {[["Name",app.coBorrowerName||"â€”"],["Mobile",`+91 ${app.coBorrowerPhone||"â€”"}`],["Relationship",app.coBorrowerRelation||"â€”"],["Address",app.coBorrowerAddress||"â€”"]].map(([k,v])=>(
+              {[["Name",app.coBorrowerName||"—"],["Mobile",`+91 ${app.coBorrowerPhone||"—"}`],["Relationship",app.coBorrowerRelation||"—"],["Address",app.coBorrowerAddress||"—"]].map(([k,v])=>(
                 <div key={k} className="p-3 rounded-2xl" style={{ background:BG }}><p className="text-[9px] font-semibold" style={{ color:MUTED }}>{k}</p><p className="text-sm font-bold mt-0.5" style={{ color:TEXT }}>{v}</p></div>
               ))}
             </div>
@@ -2176,8 +2183,8 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <select value={selectedAgent} onChange={e=>setSelectedAgent(e.target.value)} className="w-full px-4 py-3 border-2 rounded-2xl text-sm outline-none appearance-none" style={{ borderColor:BORD, color:TEXT }}>
-                  <option value="">Select agentâ€¦</option>
-                  {agents.map(a=><option key={a.id} value={a.name}>{a.name} Â· {a.zone}</option>)}
+                  <option value="">Select agent…</option>
+                  {agents.map(a=><option key={a.id} value={a.name}>{a.name} · {a.zone}</option>)}
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" color={MUTED}/>
               </div>
@@ -2213,7 +2220,7 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
   );
 }
 
-// â”€â”€â”€ ADMIN DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ADMIN DASHBOARD ──────────────────────────────────────────
 function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
   const [tab,setTab]=useState<"overview"|"applications"|"customers"|"agents"|"dues">("overview");
   const [search,setSearch]=useState("");
@@ -2242,7 +2249,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
   function loadDues(){ api('/emi-dues').then(d=>setDues(d.dues||[])).catch(()=>{}); }
   useEffect(()=>{ if(tab==="dues") loadDues(); },[tab]);
   function exportCSV(){
-    const rows=[["ID","Customer","Phone","Type","Amount","Tenure","Daily EMI","Total","Status","Agent","Date"],...apps.map(a=>[a.id,a.customerName,a.customerPhone,a.loanType,a.amount,a.tenure,a.dailyEMI,a.totalPayable,a.status,a.assignedAgent||"â€”",a.createdAt])];
+    const rows=[["ID","Customer","Phone","Type","Amount","Tenure","Daily EMI","Total","Status","Agent","Date"],...apps.map(a=>[a.id,a.customerName,a.customerPhone,a.loanType,a.amount,a.tenure,a.dailyEMI,a.totalPayable,a.status,a.assignedAgent||"—",a.createdAt])];
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob=new Blob([csv],{type:"text/csv"});
     const url=URL.createObjectURL(blob);
@@ -2278,18 +2285,18 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
       .footer{margin-top:24px;text-align:center;font-size:10px;color:#9CA3AF;border-top:1px solid #E5E7EB;padding-top:12px}
       @media print{body{padding:16px}}
     </style></head><body>
-    <div class="hdr"><div class="logo">ðŸ› Laxmi Finance Ltd.</div><p style="font-size:14px;font-weight:700;margin-top:4px">Portfolio Report â€” ${today}</p></div>
+    <div class="hdr"><div class="logo">🏛 Laxmi Finance Ltd.</div><p style="font-size:14px;font-weight:700;margin-top:4px">Portfolio Report — ${today}</p></div>
     <div class="summary">
       <div class="stat"><div class="v">${pending.length}</div><div class="l">Pending</div></div>
       <div class="stat"><div class="v">${approved.length}</div><div class="l">Approved</div></div>
       <div class="stat"><div class="v">${rejected.length}</div><div class="l">Rejected</div></div>
       <div class="stat"><div class="v">${custs.length}</div><div class="l">Customers</div></div>
     </div>
-    <p style="margin:8px 0;font-weight:700">Total Disbursed: â‚¹${approved.reduce((s,a)=>s+a.amount,0).toLocaleString("en-IN")} Â· Total Receivable: â‚¹${approved.reduce((s,a)=>s+a.totalPayable,0).toLocaleString("en-IN")}</p>
+    <p style="margin:8px 0;font-weight:700">Total Disbursed: ₹${approved.reduce((s,a)=>s+a.amount,0).toLocaleString("en-IN")} · Total Receivable: ₹${approved.reduce((s,a)=>s+a.totalPayable,0).toLocaleString("en-IN")}</p>
     <table><tr><th>ID</th><th>Customer</th><th>Phone</th><th>Type</th><th>Amount</th><th>EMI/day</th><th>Total</th><th>Status</th><th>Agent</th><th>Date</th></tr>
-    ${apps.map(a=>`<tr><td>${esc(a.id)}</td><td>${esc(a.customerName)}</td><td>${esc(a.customerPhone)}</td><td>${esc(a.loanType)}</td><td>â‚¹${(a.amount||0).toLocaleString("en-IN")}</td><td>â‚¹${(a.dailyEMI||0).toLocaleString("en-IN")}</td><td>â‚¹${(a.totalPayable||0).toLocaleString("en-IN")}</td><td>${esc(a.status)}</td><td>${esc(a.assignedAgent||"â€”")}</td><td>${esc(a.createdAt)}</td></tr>`).join("")}
+    ${apps.map(a=>`<tr><td>${esc(a.id)}</td><td>${esc(a.customerName)}</td><td>${esc(a.customerPhone)}</td><td>${esc(a.loanType)}</td><td>₹${(a.amount||0).toLocaleString("en-IN")}</td><td>₹${(a.dailyEMI||0).toLocaleString("en-IN")}</td><td>₹${(a.totalPayable||0).toLocaleString("en-IN")}</td><td>${esc(a.status)}</td><td>${esc(a.assignedAgent||"—")}</td><td>${esc(a.createdAt)}</td></tr>`).join("")}
     </table>
-    <div class="footer">Generated: ${new Date().toLocaleString("en-IN")} Â· Laxmi Finance Ltd. Â· Confidential</div>
+    <div class="footer">Generated: ${new Date().toLocaleString("en-IN")} · Laxmi Finance Ltd. · Confidential</div>
     <script>window.onload=()=>setTimeout(()=>window.print(),500)</script>
     </body></html>`;
     const w = window.open('', '_blank');
@@ -2372,15 +2379,15 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
           {tab==="applications"&&(
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-2 rounded-2xl px-3 py-2.5" style={{ borderColor:BORD }}>
-                <Search size={14} color={MUTED}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or application IDâ€¦" className="flex-1 text-xs bg-transparent outline-none" style={{ color:TEXT }}/>
+                <Search size={14} color={MUTED}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or application ID…" className="flex-1 text-xs bg-transparent outline-none" style={{ color:TEXT }}/>
                 {search&&<button onClick={()=>setSearch("")} style={{ color:MUTED }}><X size={12}/></button>}
               </div>
               {filtered.length===0&&<div className="text-center py-10"><FileText size={40} color={BORD} className="mx-auto mb-3"/><p className="text-sm" style={{ color:MUTED }}>{apps.length===0?"No applications yet. Customers need to register and apply.":"No results for \""+search+"\""}</p></div>}
               {filtered.map(app=>(
                 <div key={app.id} className="rounded-3xl p-5 border-2 cursor-pointer transition-colors hover:border-yellow-400" style={{ background:CARD, borderColor:BORD }} onClick={()=>setViewApp(app)}>
-                  <div className="flex justify-between items-start mb-3"><div><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p><p className="text-[10px] font-mono" style={{ color:MUTED }}>{app.id} Â· {app.createdAt}</p></div><Chip status={app.status}/></div>
+                  <div className="flex justify-between items-start mb-3"><div><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p><p className="text-[10px] font-mono" style={{ color:MUTED }}>{app.id} · {app.createdAt}</p></div><Chip status={app.status}/></div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-2xl mb-3" style={{ background:YBG }}>
-                    {[["Amount",fmt(app.amount)],["EMI",fmt(app.dailyEMI)+"/day"],["Plan",app.tenure+"d"],["Co-Borrower",app.coBorrowerName||"â€”"]].map(([k,v])=>(
+                    {[["Amount",fmt(app.amount)],["EMI",fmt(app.dailyEMI)+"/day"],["Plan",app.tenure+"d"],["Co-Borrower",app.coBorrowerName||"—"]].map(([k,v])=>(
                       <div key={k} className="text-center"><p className="text-[9px] font-semibold" style={{ color:MUTED }}>{k}</p><p className="text-xs font-bold mt-0.5 truncate" style={{ color:TEXT }}>{v}</p></div>
                     ))}
                   </div>
@@ -2388,7 +2395,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
                     <p className="text-xs" style={{ color:MUTED }}>Agent: {app.assignedAgent||"Unassigned"}</p>
                     <div className="flex items-center gap-2">
                       <button onClick={e=>{e.stopPropagation();deleteLoan(app.id);}} className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background:"rgba(220,38,38,0.08)" }}><Trash2 size={14} color={ERR}/></button>
-                      <button onClick={e=>{e.stopPropagation();setViewApp(app);}} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background:Y, color:TEXT }}>Review Details â†’</button>
+                      <button onClick={e=>{e.stopPropagation();setViewApp(app);}} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background:Y, color:TEXT }}>Review Details →</button>
                     </div>
                   </div>
                 </div>
@@ -2407,7 +2414,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
                       <div className="w-12 h-12 rounded-full flex items-center justify-center font-black text-sm shrink-0" style={{ background:Y, color:TEXT }}>{c.name.split(" ").map(n=>n[0]).slice(0,2).join("")}</div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold" style={{ color:TEXT }}>{c.name}</p>
-                        <p className="text-xs" style={{ color:MUTED }}>+91 {c.phone} Â· Registered {c.createdAt}</p>
+                        <p className="text-xs" style={{ color:MUTED }}>+91 {c.phone} · Registered {c.createdAt}</p>
                         <p className="text-[10px] font-mono" style={{ color:MUTED }}>{c.token}</p>
                       </div>
                       <div className="text-right shrink-0"><p className="text-sm font-bold" style={{ color:TEXT }}>{ca.length} loan{ca.length!==1?"s":""}</p>{last&&<Chip status={last.status}/>}</div>
@@ -2433,7 +2440,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
                   <div key={agent.id} className="rounded-3xl p-5 border-2" style={{ background:CARD, borderColor:BORD }}>
                     <div className="flex items-center gap-4 mb-4">
                       <div className="w-12 h-12 rounded-full flex items-center justify-center font-black text-sm shrink-0" style={{ background:TEXT, color:Y }}>{agent.name.split(" ").map(n=>n[0]).slice(0,2).join("")}</div>
-                      <div><p className="font-bold" style={{ color:TEXT }}>{agent.name}</p><p className="text-xs" style={{ color:MUTED }}>+91 {agent.phone} Â· {agent.zone}</p><span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>â— Active</span></div>
+                      <div><p className="font-bold" style={{ color:TEXT }}>{agent.name}</p><p className="text-xs" style={{ color:MUTED }}>+91 {agent.phone} · {agent.zone}</p><span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>● Active</span></div>
                     </div>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       {[["Assigned",agentApps.length],["Visits Done",agentLogs.filter(l=>l.action==="visited").length],["EMI Collected",agentLogs.filter(l=>l.action==="collected").length]].map(([k,v])=>(
@@ -2466,7 +2473,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
               {dues.map(d=>(
                 <div key={d.id} className="rounded-3xl p-5 border-2" style={{ background:CARD, borderColor:ERR+"30" }}>
                   <div className="flex items-start justify-between mb-3">
-                    <div><p className="font-bold" style={{ color:TEXT }}>{d.customerName}</p><p className="text-[10px] font-mono" style={{ color:MUTED }}>{d.id} Â· +91 {d.customerPhone}</p></div>
+                    <div><p className="font-bold" style={{ color:TEXT }}>{d.customerName}</p><p className="text-[10px] font-mono" style={{ color:MUTED }}>{d.id} · +91 {d.customerPhone}</p></div>
                     <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background:"rgba(220,38,38,0.1)", color:ERR }}>{d.dueCount} OVERDUE</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl" style={{ background:"rgba(220,38,38,0.04)" }}>
@@ -2485,7 +2492,7 @@ function AdminDashboardScreen({ navigate, session, db, setDB }:GP) {
   );
 }
 
-// â”€â”€â”€ ADMIN DATABASE SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ADMIN DATABASE SCREEN ──────────────────────────────────
 function AdminDatabaseScreen({ navigate, session }: GP) {
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState("");
@@ -2602,7 +2609,7 @@ function AdminDatabaseScreen({ navigate, session }: GP) {
                     color: active ? TEXT : MUTED
                   }}
                 >
-                  ðŸ“ {t}
+                  📁 {t}
                 </button>
               );
             })}
@@ -2615,7 +2622,7 @@ function AdminDatabaseScreen({ navigate, session }: GP) {
             <div>
               <h2 className="text-sm font-black text-gray-800">Table: {selectedTable || "None Selected"}</h2>
               <p className="text-[10px]" style={{ color: MUTED }}>
-                {columns.length} columns Â· {filteredRows.length} of {rows.length} rows loaded
+                {columns.length} columns · {filteredRows.length} of {rows.length} rows loaded
               </p>
             </div>
             
@@ -2695,7 +2702,7 @@ function AdminDatabaseScreen({ navigate, session }: GP) {
             <div className="flex justify-between items-center mb-4 shrink-0">
               <div>
                 <h3 className="text-base font-black text-gray-800">Edit Record</h3>
-                <p className="text-[10px]" style={{ color: MUTED }}>Table: {selectedTable} Â· Row ID: {editingRow.id}</p>
+                <p className="text-[10px]" style={{ color: MUTED }}>Table: {selectedTable} · Row ID: {editingRow.id}</p>
               </div>
               <button onClick={() => setEditingRow(null)} style={{ color: MUTED }}><X size={18}/></button>
             </div>
@@ -2788,7 +2795,7 @@ function AdminDatabaseScreen({ navigate, session }: GP) {
   );
 }
 
-// â”€â”€â”€ APP ROOT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── APP ROOT ─────────────────────────────────────────────────
 const INIT_DB: DB = {
   customers:[], applications:[],
   agents:[],
@@ -2818,7 +2825,7 @@ export default function App() {
     };
 
     globalTriggerLogout = () => {
-      // Navigate to login â€” keep localStorage so user can re-login easily
+      // Navigate to login — keep localStorage so user can re-login easily
       // Only a manual logout (clicking the logout button) should wipe localStorage
       setSession({ role: null, userId: "", name: "" });
       setScreen("login");
@@ -2865,10 +2872,10 @@ export default function App() {
         else if (user.role === 'agent') setScreen('agent-dashboard');
         else setScreen('customer-home');
       }
-      // If server says no session, DON'T log out â€” keep localStorage session alive.
+      // If server says no session, DON'T log out — keep localStorage session alive.
       // The user may just need to re-login the next time they try an authenticated action.
     }).catch(() => {
-      // Server is waking up or offline â€” keep localStorage session. Don't log out.
+      // Server is waking up or offline — keep localStorage session. Don't log out.
     });
 
     return () => {
