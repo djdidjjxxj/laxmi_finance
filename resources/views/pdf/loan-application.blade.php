@@ -59,6 +59,10 @@ h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   if (str_starts_with($panUrl, '/storage/')) {
       $panUrl = url($panUrl);
   }
+  $signatureUrl = $docs['signature'] ?? '';
+  if (str_starts_with($signatureUrl, '/storage/')) {
+      $signatureUrl = url($signatureUrl);
+  }
 @endphp
 
 <h3>Applicant Details</h3>
@@ -111,11 +115,18 @@ h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
 </div>
 @endif
 
-<div class="sig-row">
-  <div class="sig">Applicant Signature</div>
-  <div class="sig">Co-Borrower Signature</div>
-  <div class="sig">Authorised Signatory — Laxmi Finance</div>
-  <div class="sig">Date</div>
+<div class="sig-row" style="align-items:end;">
+  <div>
+    @if($signatureUrl)
+      <img src="{{ $signatureUrl }}" style="height:50px;object-fit:contain;margin-bottom:8px;display:block;max-width:100%" />
+    @else
+      <div style="height:58px"></div>
+    @endif
+    <div class="sig">Applicant Signature</div>
+  </div>
+  <div><div style="height:58px"></div><div class="sig">Co-Borrower Signature</div></div>
+  <div><div style="height:58px"></div><div class="sig">Authorised Signatory — Laxmi Finance</div></div>
+  <div><div style="height:58px"></div><div class="sig">Date</div></div>
 </div>
 
 <div class="footer">

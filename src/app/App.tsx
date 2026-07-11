@@ -397,6 +397,7 @@ function printApplication(app: LoanApp) {
   const photo = app.documents?.photo || app.customerPhoto;
   const aadhaarImg = app.documents?.aadhaar;
   const panImg = app.documents?.pan;
+  const signatureImg = app.documents?.signature;
 
   const html = `<!DOCTYPE html><html><head><title>Loan Application - ${app.id}</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -462,9 +463,14 @@ function printApplication(app: LoanApp) {
     <div class="row full"><span class="lbl">Address</span><span class="val">${esc(app.coBorrowerAddress||"—")}</span></div>
   </div>
 
-  <div class="sig-row">
-    <div class="sig">Applicant Signature</div><div class="sig">Co-Borrower Signature</div>
-    <div class="sig">Authorised Signatory — Laxmi Finance</div><div class="sig">Date</div>
+  <div class="sig-row" style="align-items:end;">
+    <div>
+      ${signatureImg ? `<img src="${signatureImg}" style="height:50px;object-fit:contain;margin-bottom:8px;display:block;max-width:100%" />` : `<div style="height:58px"></div>`}
+      <div class="sig">Applicant Signature</div>
+    </div>
+    <div><div style="height:58px"></div><div class="sig">Co-Borrower Signature</div></div>
+    <div><div style="height:58px"></div><div class="sig">Authorised Signatory — Laxmi Finance</div></div>
+    <div><div style="height:58px"></div><div class="sig">Date</div></div>
   </div>
   
   <div class="footer">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
@@ -1235,7 +1241,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
     if(step===0){ const pin=parseInt(form.pinCode); return form.name&&form.phone.length===10&&form.aadhaar.length===12&&form.pan.length===10&&form.dob&&form.city&&form.address&&form.pinCode.length===6&&pin>=700108&&pin<=700131&&form.income; }
     if(step===1) return form.coName&&form.coPhone.length===10&&form.coAddress;
     if(step===2) return safeAmt>=1000&&form.purpose;
-    if(step===3) return !!(files.aadhaar&&files.pan&&files.photo);
+    if(step===3) return !!(files.aadhaar&&files.pan&&files.photo&&files.signature);
     if(step===5) return form.declared;
     return true;
   }
@@ -1380,6 +1386,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
             <DocUpload label="Aadhaar Card (Front & Back)" tag="Mandatory" fieldKey="aadhaar" files={files} setFiles={setFiles} allowCamera cameraLabel="Capture Aadhaar Card"/>
             <DocUpload label="PAN Card" tag="Mandatory" fieldKey="pan" files={files} setFiles={setFiles} allowCamera cameraLabel="Capture PAN Card"/>
             <DocUpload label="Live Applicant Photograph" tag="Mandatory" fieldKey="photo" files={files} setFiles={setFiles} allowCamera cameraLabel="Take Applicant Photo"/>
+            <DocUpload label="Applicant Signature" tag="Mandatory" fieldKey="signature" files={files} setFiles={setFiles} allowCamera cameraLabel="Capture Signature"/>
           </>)}
           {step===4&&(<>
             <div className="rounded-2xl p-4 border-2" style={{ borderColor:Y, background:YBG }}>
@@ -1399,7 +1406,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
               { t:"Personal",    rows:[["Name",form.name||session.name],["Mobile",form.phone||"—"],["Aadhaar Number",form.aadhaar||"—"],["PAN Number",form.pan||"—"],["City",form.city||"—"],["PIN Code",form.pinCode||"—"],["Income",form.income?fmt(parseInt(form.income)):"—"],["Address",form.address||"—"]] },
               { t:"Co-Borrower", rows:[["Name",form.coName||"—"],["Mobile",form.coPhone||"—"],["Relation",form.coRelation],["Address",form.coAddress||"—"]] },
               { t:"Loan",        rows:[["Type",`${form.loanType} Loan`],["Amount",fmt(safeAmt)],["Plan",`${form.tenure} days daily`],["Daily EMI",selEMI?fmt(selEMI.daily):"—"],["Total",selEMI?fmt(selEMI.total):"—"],["Purpose",form.purpose||"—"]] },
-              { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"✓ Uploaded":"Pending"],["PAN Card",files.pan?"✓ Uploaded":"Pending"],["Photo",files.photo?"✓ Captured":"Pending"]] },
+              { t:"Documents",   rows:[["Aadhaar",files.aadhaar?"✓ Uploaded":"Pending"],["PAN Card",files.pan?"✓ Uploaded":"Pending"],["Photo",files.photo?"✓ Captured":"Pending"],["Signature",files.signature?"✓ Captured":"Pending"]] },
             ].map(s=>(
               <div key={s.t} className="rounded-2xl p-4 border-2" style={{ borderColor:BORD }}>
                 <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>{s.t}</p>
@@ -1423,7 +1430,7 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
             {submitting?"Submitting…":step===labels.length-1?"✓ Submit Application":`Continue → ${labels[step+1]}`}
           </button>
           {!canProceed()&&<p className="text-center text-xs" style={{ color:MUTED }}>
-            {step===0?(form.pinCode.length===6&&(parseInt(form.pinCode)<700108||parseInt(form.pinCode)>700131)?"PIN code must be between 700108 and 700131":"Fill all required fields"):step===1?"Co-borrower details are mandatory":step===2?"Enter amount and select EMI plan":step===3?"Upload Aadhaar, PAN, and take photo":step===5?"Accept the declaration":""}
+            {step===0?(form.pinCode.length===6&&(parseInt(form.pinCode)<700108||parseInt(form.pinCode)>700131)?"PIN code must be between 700108 and 700131":"Fill all required fields"):step===1?"Co-borrower details are mandatory":step===2?"Enter amount and select EMI plan":step===3?"Upload Aadhaar, PAN, Photo, and Signature":step===5?"Accept the declaration":""}
           </p>}
         </div>
       </div>
@@ -2035,7 +2042,7 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
   const logs = db.agentLogs.filter(l=>l.appId===app.id);
   const [selectedAgent,setSelectedAgent] = useState(app.assignedAgent||"");
   const docs = app.documents||{};
-  const docLabels: Record<string,string> = { photo:"Applicant Photo", aadhaar:"Aadhaar Card", pan:"PAN Card", shopPhoto:"Shop / Business Photo", biz:"Business Proof", coPhoto:"Co-Borrower Photo", other:"Other Document" };
+  const docLabels: Record<string,string> = { photo:"Applicant Photo", signature:"Applicant Signature", aadhaar:"Aadhaar Card", pan:"PAN Card", shopPhoto:"Shop / Business Photo", biz:"Business Proof", coPhoto:"Co-Borrower Photo", other:"Other Document" };
   const photoUrl = docs.photo || app.customerPhoto || "";
 
   return (
