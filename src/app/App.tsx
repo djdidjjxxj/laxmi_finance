@@ -266,19 +266,30 @@ async function executeFetch(path: string, opts: RequestInit = {}) {
 // ─── File upload helper ──────────────────────────────────────
 async function apiUpload(dataUrl: string, filename: string): Promise<string> {
   await ensureCsrf();
-  const xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.split('=')[1];
+  let xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.split('=')[1];
   const resp = await fetch(dataUrl);
   const blob = await resp.blob();
   const fd = new FormData();
   fd.append('file', blob, filename);
-  const res = await fetch('/api/uploads', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { Accept: 'application/json', ...(xsrf ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrf) } : {}) },
-    body: fd,
+  
+  const makeReq = (token?: string) => fetch('/api/uploads', {
+    method: 'POST', credentials: 'include', body: fd,
+    headers: { Accept: 'application/json', ...(token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {}) }
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Upload failed');
+  
+  let res = await makeReq(xsrf);
+  if (res.status === 419) {
+    csrfReady = null;
+    await ensureCsrf();
+    xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.split('=')[1];
+    res = await makeReq(xsrf);
+  }
+  
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) {
+    if (res.status === 401 && globalTriggerLogout) globalTriggerLogout();
+    throw new Error(data.message || 'Upload failed');
+  }
   return data.path;
 }
 
@@ -373,7 +384,7 @@ interface LoanApp {
   documents?:Record<string,string>; customerPhoto?:string;
 }
 interface AgentUser { id:string; name:string; phone:string; password:string; zone:string; }
-interface AgentLog { agentId:string; appId:string; action:"visited"|"collected"; time:string; }
+interface AgentLog { agentId:string; appId:string; action:"visited"|"collected"|"verified"; time:string; receipt?:string; documents?:string[]; }
 interface DB { customers:Customer[]; applications:LoanApp[]; agents:AgentUser[]; agentLogs:AgentLog[]; }
 type UserRole = "customer"|"agent"|"admin"|null;
 interface Session { role:UserRole; userId:string; name:string; }
@@ -403,6 +414,7 @@ function printApplication(app: LoanApp) {
   const adminSignatureImg = toAbsUrl((app as any).adminSignatureUrl);
   const isApproved = app.status === 'approved';
   const approvalDate = isApproved ? ((app as any).updatedAt || '') : '';
+  const agentVerifyDocs = (app.documents?.agent_verification || []).map((p:string)=>toAbsUrl(p)).filter(Boolean);
 
   const html = `<!DOCTYPE html><html><head><title>Loan Application - ${app.id}</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -506,6 +518,21 @@ function printApplication(app: LoanApp) {
           <img src="${panImg}" class="doc-img" />
         </div>
       ` : ''}
+    </div>
+    <div class="footer" style="margin-top: 64px;">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
+  ` : ''}
+  
+  ${agentVerifyDocs.length > 0 ? `
+    <div class="page-break"></div>
+    <div class="hdr"><div class="logo">₹₹ Laxmi Finance Ltd.</div><div class="id">${app.id}</div></div>
+    <h3>Agent Verification Documents</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px;">
+      ${agentVerifyDocs.map((url:string, i:number) => `
+        <div class="doc-box">
+          <div class="doc-title">Field Verification Photo ${i+1}</div>
+          <img src="${url}" class="doc-img" />
+        </div>
+      `).join('')}
     </div>
     <div class="footer" style="margin-top: 64px;">Laxmi Finance Ltd. · RBI Licensed NBFC · Generated: ${new Date().toLocaleString("en-IN")}</div>
   ` : ''}
@@ -1270,19 +1297,8 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
       const docs: Record<string, string> = {};
       for (const [key, file] of Object.entries(files)) {
         if (file) {
-          try {
-            // Use apiUpload to POST the file as multipart/form-data and get a /storage/… path
-            const path = await apiUpload(file.url, `${key}-${Date.now()}.jpg`);
-            docs[key] = path;
-          } catch {
-            // Fallback: compress and embed as base64 (smaller, ~50–80 KB per image)
-            try {
-              const base64 = await fileToBase64(file.url);
-              docs[key] = await compressImage(base64, 600, 600, 0.6);
-            } catch {
-              docs[key] = 'local';
-            }
-          }
+          const path = await apiUpload(file.url, `${key}-${Date.now()}.jpg`);
+          docs[key] = path;
         }
       }
 
@@ -1804,6 +1820,84 @@ function AgentRegisterScreen({ navigate, setSession, setDB }:GP) {
   );
 }
 
+//  AGENT VERIFICATION CARD 
+function AgentVerificationCard({ app, session, visited, setVisited, setDB }: any) {
+  const [calling, setCalling] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleVerify = async (e: any) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const docPaths = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = URL.createObjectURL(files[i]);
+        const path = await apiUpload(url, `verify-${app.id}-${i}-${Date.now()}.jpg`);
+        docPaths.push(path);
+      }
+      
+      await api('/agent/log', {
+        method: 'POST',
+        body: JSON.stringify({ application_number: app.id, action: 'verified', documents: docPaths })
+      });
+      setVisited((v: any) => ({ ...v, [app.id]: true }));
+      setDB((d: any) => ({
+        ...d,
+        agentLogs: [...d.agentLogs, { agentId: session.userId, appId: app.id, action: 'verified', time: new Date().toLocaleString(), documents: docPaths }]
+      }));
+      toast.success("Verification documents submitted!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div className="rounded-3xl p-5 border-2" style={{ background: CARD, borderColor: BORD }}>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-bold" style={{ color: TEXT }}>{app.customerName}</p>
+            {visited[app.id] && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(22,163,74,0.1)", color: OK }}>Verified ✓</span>}
+          </div>
+          <p className="text-[10px] font-mono" style={{ color: MUTED }}>{app.id}</p>
+        </div>
+        <Chip status={app.status} />
+      </div>
+      <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl mb-4" style={{ background: YBG }}>
+        {[["Amount", `₹${app.amount}`], ["Daily EMI", `₹${app.dailyEMI}`], ["Plan", `${app.tenure}d`]].map(([k, v]) => (
+          <div key={k} className="text-center">
+            <p className="text-[9px] font-semibold" style={{ color: MUTED }}>{k}</p>
+            <p className="text-sm font-bold mt-0.5" style={{ color: TEXT }}>{v}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={() => {
+            setCalling(true);
+            setTimeout(() => { setCalling(false); toast.success("Admin noted your call (Demo)"); }, 2000);
+          }}
+          disabled={calling}
+          className="px-3 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap border flex items-center gap-1.5 active:scale-95 transition-transform" 
+          style={{ background: "#fff", borderColor: BORD, color: TEXT }}>
+          <Phone size={12} color={calling ? MUTED : "#2563EB"} />
+          {calling ? "Calling Admin..." : "Call Admin"}
+        </button>
+        <button onClick={() => fileInputRef.current?.click()}
+          disabled={visited[app.id] || uploading}
+          className="px-3 py-2 rounded-xl text-[11px] font-bold flex-1 active:opacity-85 whitespace-nowrap flex items-center justify-center gap-1.5 transition-transform active:scale-95" 
+          style={{ background: visited[app.id] ? "rgba(22,163,74,0.1)" : Y, color: visited[app.id] ? OK : TEXT, opacity: uploading ? 0.7 : 1 }}>
+          <Camera size={14} />
+          {visited[app.id] ? "✓ Verified" : uploading ? "Uploading..." : "Verify & Upload"}
+        </button>
+        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple capture="environment" onChange={handleVerify} />
+      </div>
+    </div>
+  );
+}
+
 // ─── AGENT DASHBOARD ─────────────────────────────────────────
 function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
   const [tab,setTab]=useState<"visits"|"collection">("visits");
@@ -1832,11 +1926,11 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
     setCollecting(c=>({...c,[appId]:false}));
   }
 
-  // Only approved loans assigned to this agent are shown
-  const myAssignedApps = db.applications.filter(a => a.assignedAgent === session.name && a.status === "approved");
-  const allApps=myAssignedApps;
-  const filtered=allApps.filter(a=>!search||a.customerName.toLowerCase().includes(search.toLowerCase())||a.id.includes(search));
-  const approved=allApps.filter(a=>a.status==="approved");
+  const myAssignedApps = db.applications.filter(a => a.assignedAgent === session.name);
+  const pendingApps = myAssignedApps.filter(a => a.status === "pending" || a.status === "processing");
+  const approvedApps = myAssignedApps.filter(a => a.status === "approved");
+  const filteredVisits = pendingApps.filter(a=>!search||a.customerName.toLowerCase().includes(search.toLowerCase())||a.id.includes(search));
+  const filteredCollection = approvedApps.filter(a=>!search||a.customerName.toLowerCase().includes(search.toLowerCase())||a.id.includes(search));
 
   // Helper functions for assignment stats
   const parseDate = (dateStr: string) => {
@@ -1884,7 +1978,7 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          {[["Applications",allApps.length],["Visited",db.agentLogs.filter(l=>l.action==="visited").length+Object.values(visited).filter(Boolean).length],["Collected",db.agentLogs.filter(l=>l.action==="collected").length+Object.values(collected).filter(Boolean).length]].map(([k,v])=>(
+          {[["Assigned",myAssignedApps.length],["Visited",db.agentLogs.filter(l=>l.action==="verified").length+Object.values(visited).filter(Boolean).length],["Collected",db.agentLogs.filter(l=>l.action==="collected").length+Object.values(collected).filter(Boolean).length]].map(([k,v])=>(
             <div key={k} className="rounded-2xl p-2.5 sm:p-3 text-center min-w-0" style={{ background:"rgba(255,255,255,0.08)" }}><p className="text-xl sm:text-2xl font-black text-white">{v}</p><p className="text-[8px] sm:text-[9px] font-semibold truncate" style={{ color:"rgba(255,255,255,0.55)" }}>{k}</p></div>
           ))}
         </div>
@@ -1949,36 +2043,17 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
               <Search size={14} color={MUTED}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" className="flex-1 text-xs bg-transparent outline-none" style={{ color:TEXT }}/>
               {search&&<button onClick={()=>setSearch("")} style={{ color:MUTED }}><X size={12}/></button>}
             </div>
-            {filtered.length===0&&<p className="text-center py-8 text-sm" style={{ color:MUTED }}>{allApps.length===0?"No applications yet. New customer registrations appear here.":"No results"}</p>}
+            {filteredVisits.length===0&&<p className="text-center py-8 text-sm" style={{ color:MUTED }}>{pendingApps.length===0?"No pending applications for verification.":"No results"}</p>}
             <div className="space-y-4">
-              {filtered.map(app=>(
-                <div key={app.id} className="rounded-3xl p-5 border-2" style={{ background:CARD, borderColor:BORD }}>
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="flex items-center gap-2"><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p>{visited[app.id]&&<span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background:"rgba(22,163,74,0.1)", color:OK }}>Visited ✓</span>}</div>
-                      <p className="text-[10px] font-mono" style={{ color:MUTED }}>{app.id}</p>
-                    </div>
-                    <Chip status={app.status}/>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl mb-4" style={{ background:YBG }}>
-                    {[["Amount",fmt(app.amount)],["Daily EMI",fmt(app.dailyEMI)],["Plan",`${app.tenure}d`]].map(([k,v])=>(
-                      <div key={k} className="text-center"><p className="text-[9px] font-semibold" style={{ color:MUTED }}>{k}</p><p className="text-sm font-bold mt-0.5" style={{ color:TEXT }}>{v}</p></div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <button onClick={()=>{ api('/agent/log',{method:'POST',body:JSON.stringify({application_number:app.id,action:'visited'})}).then(()=>{ setVisited(v=>({...v,[app.id]:true})); setDB(d=>({...d,agentLogs:[...d.agentLogs,{agentId:session.userId,appId:app.id,action:"visited",time:new Date().toLocaleString()}]})); toast.success("Visit marked"); }).catch((e:any)=>toast.error(e.message)); }}
-                      className="px-3 py-2 rounded-xl text-[11px] font-bold active:opacity-85 whitespace-nowrap" style={{ background:visited[app.id]?"rgba(22,163,74,0.1)":YBG, color:visited[app.id]?OK:Y2 }}>
-                      {visited[app.id]?"✓ Visited":"Mark Visited"}
-                    </button>
-                  </div>
-                </div>
+              {filteredVisits.map(app=>(
+                <AgentVerificationCard key={app.id} app={app} session={session} visited={visited} setVisited={setVisited} setDB={setDB} />
               ))}
             </div>
           </>)}
           {tab==="collection"&&(
             <div className="space-y-4">
-              {approved.length===0&&<p className="text-center py-8 text-sm" style={{ color:MUTED }}>No approved loans yet</p>}
-              {approved.map(app=>(
+              {filteredCollection.length===0&&<p className="text-center py-8 text-sm" style={{ color:MUTED }}>No approved loans yet</p>}
+              {filteredCollection.map(app=>(
                 <div key={app.id} className="rounded-3xl p-5 border-2" style={{ background:CARD, borderColor:BORD }}>
                   <div className="flex justify-between items-start mb-3">
                     <div><p className="font-bold" style={{ color:TEXT }}>{app.customerName}</p><p className="text-[10px] font-mono" style={{ color:MUTED }}>{app.id}</p></div>
@@ -2153,17 +2228,12 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color:MUTED }}>Uploaded Documents</p>
               <div className="grid grid-cols-2 gap-3">
-                {Object.entries(docs).map(([key,url])=>(
+                {Object.entries(docs).filter(([k,v]) => typeof v === 'string').map(([key,url])=>(
                   <div key={key} onClick={() => {
                     if (!url) return;
                     const html = `<!DOCTYPE html><html><head><title>${docLabels[key] || key}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column}img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}p{color:#aaa;margin-top:12px;font-family:sans-serif;font-size:13px}</style></head><body><img src="${url}" /><p>${docLabels[key] || key}</p></body></html>`;
                     const w = window.open('', '_blank');
-                    if (w) {
-                      w.document.write(html);
-                      w.document.close();
-                    } else {
-                      toast.error("Allow popups to view document");
-                    }
+                    if (w) { w.document.write(html); w.document.close(); } else { toast.error("Allow popups to view document"); }
                   }} className="block rounded-2xl overflow-hidden border-2 hover:shadow-lg transition-shadow cursor-pointer animate-fadeIn" style={{ borderColor:BORD }}>
                     <div className="h-28 bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img src={url as string} alt={docLabels[key]||key} className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none';(e.target as HTMLImageElement).parentElement!.innerHTML=`<div class="flex flex-col items-center gap-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${MUTED}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg><span style="font-size:10px;color:${MUTED}">View File</span></div>`;}}/>
@@ -2171,6 +2241,37 @@ function AppDetailModal({ app, agents, db, onClose, onApprove, onReject, onAssig
                     <div className="px-3 py-2" style={{ background:YBG }}>
                       <p className="text-[10px] font-bold truncate" style={{ color:TEXT }}>{docLabels[key]||key}</p>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Agent Activity & Verification */}
+          {logs.length > 0 && (
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest mb-3 mt-4" style={{ color:MUTED }}>Agent Activity & Documents</p>
+              <div className="space-y-3">
+                {logs.map((log, i) => (
+                  <div key={i} className="p-3 rounded-2xl border" style={{ borderColor:BORD, background:YBG }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-xs font-bold capitalize" style={{ color:TEXT }}>{log.action} <span className="font-normal text-[10px]" style={{ color:MUTED }}>on {log.time}</span></p>
+                      <p className="text-[10px] font-mono" style={{ color:MUTED }}>{agents.find(a=>a.id===log.agentId)?.name || 'Agent'}</p>
+                    </div>
+                    {log.receipt && (
+                      <div className="mt-2 h-24 w-24 rounded-xl overflow-hidden border cursor-pointer" onClick={() => window.open(log.receipt, '_blank')}>
+                        <img src={log.receipt} className="w-full h-full object-cover" alt="Receipt" />
+                      </div>
+                    )}
+                    {log.documents && log.documents.length > 0 && (
+                      <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                        {log.documents.map((doc: string, idx: number) => (
+                          <div key={idx} className="h-24 w-24 shrink-0 rounded-xl overflow-hidden border cursor-pointer" onClick={() => window.open(doc, '_blank')}>
+                            <img src={doc} className="w-full h-full object-cover" alt={`Verification ${idx+1}`} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

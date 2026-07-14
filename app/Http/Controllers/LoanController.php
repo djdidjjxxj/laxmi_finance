@@ -245,12 +245,20 @@ class LoanController extends Controller
     {
         $request->validate([
             'application_number' => ['required', 'string'],
-            'action' => ['required', 'in:visited,collected'],
-            'receipt' => ['nullable', 'string']
+            'action' => ['required', 'in:visited,collected,verified'],
+            'receipt' => ['nullable', 'string'],
+            'documents' => ['nullable', 'array']
         ]);
 
         $user = $request->user();
         $loan = LoanApplication::where('application_number', $request->application_number)->firstOrFail();
+
+        if ($request->action === 'verified' && $request->documents) {
+            $docs = $loan->documents ?? [];
+            $docs['agent_verification'] = $request->documents;
+            $loan->documents = $docs;
+            $loan->save();
+        }
 
         AgentLog::create([
             'agent_id' => $user->id,
