@@ -107,6 +107,20 @@ class LoanController extends Controller
             $dailyEMI = ($tenure == 33) ? round($amount * 0.04) : round($amount * 0.02);
             $totalPayable = $dailyEMI * $tenure;
 
+            $docs = $request->documents ?? [];
+            foreach ($docs as $key => $val) {
+                if (is_string($val) && str_starts_with($val, 'data:image')) {
+                    $base64 = preg_replace('#^data:image/\w+;base64,#i', '', $val);
+                    $base64 = str_replace(' ', '+', $base64);
+                    $decoded = base64_decode($base64);
+                    if ($decoded !== false) {
+                        $filename = 'fb_' . $key . '-' . time() . '.jpg';
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                        $docs[$key] = '/storage/' . $filename;
+                    }
+                }
+            }
+
             // Core loan data (always works)
             $loanData = [
                 'customer_id'       => $customerId,
@@ -122,7 +136,7 @@ class LoanController extends Controller
                 'address'           => $request->address,
                 'monthly_income'    => $request->monthly_income,
                 'co_borrower'       => $request->co_borrower,
-                'documents'         => $request->documents ?? [],
+                'documents'         => $docs,
                 'assigned_agent_id' => $agentId,
             ];
 
@@ -253,9 +267,39 @@ class LoanController extends Controller
         $user = $request->user();
         $loan = LoanApplication::where('application_number', $request->application_number)->firstOrFail();
 
-        if ($request->action === 'verified' && $request->documents) {
+        $receiptUrl = $request->receipt;
+        if (is_string($receiptUrl) && str_starts_with($receiptUrl, 'data:image')) {
+            $base64 = preg_replace('#^data:image/\w+;base64,#i', '', $receiptUrl);
+            $base64 = str_replace(' ', '+', $base64);
+            $decoded = base64_decode($base64);
+            if ($decoded !== false) {
+                $filename = 'fb_receipt-' . time() . '.jpg';
+                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                $receiptUrl = '/storage/' . $filename;
+            } else {
+                $receiptUrl = 'local';
+            }
+        }
+
+        $agentDocs = $request->documents ?? [];
+        if ($request->action === 'verified' && !empty($agentDocs)) {
+            foreach ($agentDocs as $k => $v) {
+                if (is_string($v) && str_starts_with($v, 'data:image')) {
+                    $base64 = preg_replace('#^data:image/\w+;base64,#i', '', $v);
+                    $base64 = str_replace(' ', '+', $base64);
+                    $decoded = base64_decode($base64);
+                    if ($decoded !== false) {
+                        $filename = 'fb_verify-' . $k . '-' . time() . '.jpg';
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                        $agentDocs[$k] = '/storage/' . $filename;
+                    } else {
+                        $agentDocs[$k] = 'local';
+                    }
+                }
+            }
+
             $docs = $loan->documents ?? [];
-            $docs['agent_verification'] = $request->documents;
+            $docs['agent_verification'] = $agentDocs;
             $loan->documents = $docs;
             $loan->save();
         }
@@ -265,7 +309,7 @@ class LoanController extends Controller
             'loan_application_id' => $loan->id,
             'application_number' => $request->application_number,
             'action' => $request->action,
-            'receipt_url' => $request->receipt
+            'receipt_url' => $receiptUrl
         ]);
 
         return response()->json(['success' => true]);

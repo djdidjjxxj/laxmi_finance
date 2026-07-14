@@ -1297,8 +1297,17 @@ function LoanApplicationScreen({ navigate, session, db, setDB }:GP) {
       const docs: Record<string, string> = {};
       for (const [key, file] of Object.entries(files)) {
         if (file) {
-          const path = await apiUpload(file.url, `${key}-${Date.now()}.jpg`);
-          docs[key] = path;
+          try {
+            const path = await apiUpload(file.url, `${key}-${Date.now()}.jpg`);
+            docs[key] = path;
+          } catch {
+            try {
+              const base64 = await fileToBase64(file.url);
+              docs[key] = await compressImage(base64, 600, 600, 0.6);
+            } catch {
+              docs[key] = 'local';
+            }
+          }
         }
       }
 
@@ -1834,8 +1843,18 @@ function AgentVerificationCard({ app, session, visited, setVisited, setDB }: any
       const docPaths = [];
       for (let i = 0; i < files.length; i++) {
         const url = URL.createObjectURL(files[i]);
-        const path = await apiUpload(url, `verify-${app.id}-${i}-${Date.now()}.jpg`);
-        docPaths.push(path);
+        try {
+          const path = await apiUpload(url, `verify-${app.id}-${i}-${Date.now()}.jpg`);
+          docPaths.push(path);
+        } catch {
+          try {
+            const base64 = await fileToBase64(url);
+            const comp = await compressImage(base64, 600, 600, 0.6);
+            docPaths.push(comp);
+          } catch {
+            docPaths.push('local');
+          }
+        }
       }
       
       await api('/agent/log', {
@@ -1912,7 +1931,18 @@ function AgentDashboardScreen({ navigate, session, db, setDB }:GP) {
     setCollecting(c=>({...c,[appId]:true}));
     try {
       const url = URL.createObjectURL(file);
-      const receiptPath = await apiUpload(url, `receipt-${appId}-${Date.now()}.jpg`);
+      let receiptPath = '';
+      try {
+        receiptPath = await apiUpload(url, `receipt-${appId}-${Date.now()}.jpg`);
+      } catch {
+        try {
+          const base64 = await fileToBase64(url);
+          receiptPath = await compressImage(base64, 600, 600, 0.6);
+        } catch {
+          receiptPath = 'local';
+        }
+      }
+      
       await api('/agent/log', {
         method: 'POST',
         body: JSON.stringify({ application_number: appId, action: 'collected', receipt: receiptPath })
