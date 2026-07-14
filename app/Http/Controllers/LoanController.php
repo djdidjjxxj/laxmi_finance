@@ -95,12 +95,9 @@ class LoanController extends Controller
             $amount = $request->amount;
             $tenure = $request->tenure_days;
 
-            // Idempotency check: prevent duplicate submissions within 2 minutes
+            // Idempotency check: prevent any duplicate submissions from the same customer within 30 seconds
             $recentLoan = LoanApplication::where('customer_id', $customerId)
-                ->where('amount', $amount)
-                ->where('tenure_days', $tenure)
-                ->where('status', 'pending')
-                ->where('created_at', '>=', now()->subMinutes(2))
+                ->where('created_at', '>=', now()->subSeconds(30))
                 ->first();
 
             if ($recentLoan) {
