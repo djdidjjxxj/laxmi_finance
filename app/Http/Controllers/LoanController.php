@@ -94,6 +94,19 @@ class LoanController extends Controller
 
             $amount = $request->amount;
             $tenure = $request->tenure_days;
+
+            // Idempotency check: prevent duplicate submissions within 2 minutes
+            $recentLoan = LoanApplication::where('customer_id', $customerId)
+                ->where('amount', $amount)
+                ->where('tenure_days', $tenure)
+                ->where('status', 'pending')
+                ->where('created_at', '>=', now()->subMinutes(2))
+                ->first();
+
+            if ($recentLoan) {
+                return response()->json(['loan' => $this->formatApp($recentLoan)], 200);
+            }
+
             $dailyEMI = ($tenure == 33) ? round($amount * 0.04) : round($amount * 0.02);
             $totalPayable = $dailyEMI * $tenure;
 
